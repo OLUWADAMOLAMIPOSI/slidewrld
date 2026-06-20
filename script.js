@@ -21,11 +21,11 @@ let masterData = {
 // Sign up at https://www.emailjs.com/ (free)
 // Create a service, template, and get your keys
 const EMAILJS_CONFIG = {
-    serviceID: '',   // From EmailJS dashboard
-    templateID: 'YOUR_EMAILJS_TEMPLATE_ID', // From EmailJS dashboard
-    publicKey: 'YOUR_EMAILJS_PUBLIC_KEY'    // From EmailJS dashboard
+    serviceID: 'service_wb3p8dr',      // From Email Services
+    templateID: 'template_c48pzne',    // From Customer Template
+    adminTemplateID: 'template_up85npa', // From Admin Template
+    publicKey: '6TrMlOi-MYhhQzGYs'        // From Account → API Keys
 };
-
 
 // ============================================================
 // HAMBURGER MENU TOGGLE (Main Nav)
@@ -194,23 +194,14 @@ async function testAPI() {
 // ============================================================
 async function sendAdminNotification(order) {
     try {
-        // Check if EmailJS is configured
         if (EMAILJS_CONFIG.serviceID === 'YOUR_EMAILJS_SERVICE_ID') {
-            console.log('EmailJS not configured. Please set up EmailJS.');
-            console.log('Order notification would be sent to admin:', order);
+            console.log('EmailJS not configured. Order:', order);
             return false;
         }
-
-        // Load EmailJS SDK if not loaded
-        if (typeof emailjs === 'undefined') {
-            await loadEmailJS();
-        }
-
+        if (typeof emailjs === 'undefined') { await loadEmailJS(); }
         const s = getSettings();
-        const adminEmail = s.adminEmail || 'admin@slidewrld.com';
+        const adminEmail = s.adminEmail || 'peacetimilehin380@gmail.com';
         const total = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
-
-        // Send to admin
         const adminParams = {
             to_email: adminEmail,
             to_name: 'SlideWrld Admin',
@@ -221,19 +212,16 @@ async function sendAdminNotification(order) {
             order_items: order.items.map(i => `${i.name} x${i.qty} - ₦${(i.price * i.qty).toLocaleString()}`).join('\n'),
             order_total: '₦' + total.toLocaleString(),
             order_date: order.date,
-            payment_proof: order.hasProof ? 'Uploaded' : 'Not uploaded',
             status: order.status,
-            message: `New order from ${order.name}. Please check the order and confirm payment.`
+            message: `New order from ${order.name}. Please check and confirm payment.`
         };
-
         await emailjs.send(
             EMAILJS_CONFIG.serviceID,
-            EMAILJS_CONFIG.templateID,
+            EMAILJS_CONFIG.template_up85npa,  // Use admin template
             adminParams,
             EMAILJS_CONFIG.publicKey
         );
-
-        console.log('Admin notification sent successfully');
+        console.log('Admin notification sent');
         return true;
     } catch (e) {
         console.error('Failed to send admin email:', e);
@@ -247,17 +235,12 @@ async function sendCustomerNotification(order, status) {
             console.log('EmailJS not configured. Customer notification would be sent.');
             return false;
         }
-
-        if (typeof emailjs === 'undefined') {
-            await loadEmailJS();
-        }
-
+        if (typeof emailjs === 'undefined') { await loadEmailJS(); }
         const statusMessages = {
-            pending: 'Your order is pending payment confirmation.',
-            confirmed: 'Your payment has been confirmed! Your order is being processed.',
-            shipped: 'Your order has been shipped! Track your package soon.'
+            pending: 'Your order is pending payment confirmation. We will notify you once your payment is confirmed.',
+            confirmed: 'Your payment has been confirmed! Your order is being processed for dispatch.',
+            shipped: 'Your order has been shipped! Track your package and get ready to wear your SlideWrld slides.'
         };
-
         const params = {
             to_email: order.email,
             to_name: order.name.split(' ')[0] || 'Customer',
@@ -268,15 +251,13 @@ async function sendCustomerNotification(order, status) {
             order_total: '₦' + order.items.reduce((sum, i) => sum + (i.price * i.qty), 0).toLocaleString(),
             message: `Your order ${order.id} status is now: ${status.toUpperCase()}.`
         };
-
         await emailjs.send(
             EMAILJS_CONFIG.serviceID,
-            EMAILJS_CONFIG.templateID,
+            EMAILJS_CONFIG.template_c48pzne,  // Use customer template
             params,
             EMAILJS_CONFIG.publicKey
         );
-
-        console.log('Customer notification sent successfully');
+        console.log('Customer notification sent');
         return true;
     } catch (e) {
         console.error('Failed to send customer email:', e);
