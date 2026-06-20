@@ -103,7 +103,7 @@ function save(key, val) {
 // ============================================================
 async function loadFromServer() {
     try {
-        const res = await fetch(API_URL + '?action=get');
+        const res = await fetch(API_URL + '?action=get', { cache: 'no-store' });
         if (!res.ok) {
             throw new Error('Server returned ' + res.status);
         }
@@ -1090,37 +1090,3 @@ document.querySelectorAll('.modal-overlay').forEach(m =>
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
 });
-// ============================================================
-// TEMPORARY EMAIL TEST FUNCTION - remove after testing
-// ============================================================
-async function runEmailTest() {
-  try {
-    if (typeof emailjs === 'undefined') {
-      await loadEmailJS();
-    }
-    const result = await emailjs.send(
-      EMAILJS_CONFIG.serviceID,
-      EMAILJS_CONFIG.adminTemplateID,
-      {
-        to_email: getSettings().adminEmail || 'youremail@example.com',
-        to_name: 'Test Admin',
-        customer_name: 'Test Customer',
-        customer_email: 'test@example.com',
-        customer_phone: '08000000000',
-        order_id: 'TEST123',
-        order_items: 'Test Item x1 - N1000',
-        order_total: 'N1000',
-        order_date: 'Today',
-        payment_proof: 'Not uploaded',
-        status: 'pending',
-        message: 'This is a one tap test.'
-      },
-      EMAILJS_CONFIG.publicKey
-    );
-    showToast('Test email sent. Check inbox.', 'success');
-    console.log('Email test result', result);
-  } catch (e) {
-    showToast('Test email failed. Check console.', 'error');
-    console.error('Email test error', e);
-  }
-}
