@@ -4,6 +4,18 @@
 const ADMIN_PASSWORD_DEFAULT = 'PeaceA29';
 
 // ============================================================
+// NETLIFY API CONFIGURATION
+// ============================================================
+const API_URL = '/api';
+
+let masterData = {
+    products: [],
+    orders: [],
+    subscribers: [],
+    settings: {}
+};
+
+// ============================================================
 // HAMBURGER MENU TOGGLE (Main Nav)
 // ============================================================
 function toggleMenu() {
@@ -76,9 +88,97 @@ function save(key, val) {
 }
 
 // ============================================================
+// LOAD DATA FROM SERVER
+// ============================================================
+async function loadFromServer() {
+    try {
+        const res = await fetch(API_URL + '?action=get');
+        if (!res.ok) {
+            throw new Error('Server returned ' + res.status);
+        }
+        const data = await res.json();
+        if (data.error) {
+            throw new Error(data.error);
+        }
+        masterData = data;
+        try {
+            save('sw_products', masterData.products);
+            save('sw_orders', masterData.orders);
+            save('sw_subs', masterData.subscribers);
+            save('sw_settings', masterData.settings);
+        } catch (e) {
+            console.log('Could not save to localStorage');
+        }
+        console.log('Data loaded from server successfully');
+        return true;
+    } catch (e) {
+        console.error('Error loading from server:', e.message);
+        console.log('Using localStorage as fallback');
+        masterData.products = load('sw_products', []);
+        masterData.orders = load('sw_orders', []);
+        masterData.subscribers = load('sw_subs', []);
+        masterData.settings = load('sw_settings', {});
+        return false;
+    }
+}
+
+// ============================================================
+// SAVE DATA TO SERVER
+// ============================================================
+async function saveToServer() {
+    try {
+        const res = await fetch(API_URL + '?action=save', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(masterData)
+        });
+        if (!res.ok) {
+            throw new Error('Server returned ' + res.status);
+        }
+        const result = await res.json();
+        if (result.error) {
+            throw new Error(result.error);
+        }
+        console.log('Data saved to server successfully');
+        return true;
+    } catch (e) {
+        console.error('Error saving to server:', e.message);
+        console.log('Saved to localStorage only (will not sync to other devices)');
+        try {
+            save('sw_products', masterData.products);
+            save('sw_orders', masterData.orders);
+            save('sw_subs', masterData.subscribers);
+            save('sw_settings', masterData.settings);
+        } catch (e2) {
+            console.error('Could not save to localStorage:', e2.message);
+        }
+        return false;
+    }
+}
+
+// ============================================================
+// TEST API CONNECTION
+// ============================================================
+async function testAPI() {
+    try {
+        const res = await fetch(API_URL + '?action=ping');
+        const data = await res.json();
+        console.log('API Test Result:', data);
+        if (data.status === 'ok') {
+            showToast('API is working! Data will sync across devices.', 'success');
+        } else {
+            showToast('API is not working properly. Check console.', 'error');
+        }
+    } catch (e) {
+        console.error('API test failed:', e.message);
+        showToast('Cannot connect to API. Check your internet connection.', 'error');
+    }
+}
+
+// ============================================================
 // PLACEHOLDER PRODUCT ART
-// Used until the admin uploads a real photo for a product.
-// Built as inline SVG so it never fails to load.
 // ============================================================
 function placeholderImg(label) {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 400">
@@ -100,17 +200,20 @@ const DEFAULT_PRODUCTS = [
   { id: 6, name: 'Bare Classic II', cat: 'classic', price: 15500, oldPrice: null, desc: 'Stripped back design, two strap bands, minimal branding. Built for the man who keeps it simple.', img: placeholderImg('BARE CLASSIC II'), badge: 'New' },
 ];
 
-function getProducts()    { return load('sw_products', DEFAULT_PRODUCTS); }
-function getOrders()      { return load('sw_orders', []); }
-function getSubscribers() { return load('sw_subs', []); }
-function getSettings()    { return load('sw_settings', {}); }
+// ============================================================
+// REPLACED GET/SET FUNCTIONS (Now using masterData)
+// ============================================================
+function getProducts()    { return masterData.products || []; }
+function getOrders()      { return masterData.orders || []; }
+function getSubscribers() { return masterData.subscribers || []; }
+function getSettings()    { return masterData.settings || {}; }
 function getCart()        { return load('sw_cart', []); }
 
-function setProducts(v)    { save('sw_products', v); }
-function setOrders(v)      { save('sw_orders', v); }
-function setSubscribers(v) { save('sw_subs', v); }
-function setSettings(v)    { save('sw_settings', v); }
-function setCart(v)        { save('sw_cart', v); }
+async function setProducts(v)    { masterData.products = v; await saveToServer(); }
+async function setOrders(v)      { masterData.orders = v; await saveToServer(); }
+async function setSubscribers(v) { masterData.subscribers = v; await saveToServer(); }
+async function setSettings(v)    { masterData.settings = v; await saveToServer(); }
+function setCart(v)              { save('sw_cart', v); }
 
 let modalProd = null;
 let modalQtyVal = 1;
@@ -320,7 +423,10 @@ function previewProof(inp) {
   }
 }
 
-function placeOrder(e) {
+// ============================================================
+// PLACE ORDER (UPDATED)
+// ============================================================
+async function placeOrder(e) {
   e.preventDefault();
   const first = document.getElementById('oFirst').value;
   const last  = document.getElementById('oLast').value;
@@ -345,7 +451,7 @@ function placeOrder(e) {
 
   const orders = getOrders();
   orders.unshift(order);
-  setOrders(orders);
+  await setOrders(orders);
 
   const s = getSettings();
   if (s.adminEmail) {
@@ -361,15 +467,15 @@ function placeOrder(e) {
 }
 
 // ============================================================
-// NEWSLETTER (storefront)
+// NEWSLETTER (UPDATED)
 // ============================================================
-function subscribeNewsletter(e) {
+async function subscribeNewsletter(e) {
   e.preventDefault();
   const email = document.getElementById('nlEmail').value.trim();
   const subs = getSubscribers();
   if (!subs.find(s => s.email === email)) {
     subs.push({ email, date: new Date().toLocaleDateString() });
-    setSubscribers(subs);
+    await setSubscribers(subs);
     showToast('You are on the list.', 'success');
   } else {
     showToast('You are already on the list.', 'success');
@@ -378,7 +484,7 @@ function subscribeNewsletter(e) {
 }
 
 // ============================================================
-// ADMIN LOGIN — password only, no email
+// ADMIN LOGIN
 // ============================================================
 function doLogin() {
   const pwd = document.getElementById('loginPwd').value;
@@ -454,19 +560,25 @@ function renderOrdersTable() {
   </tr>`).join('');
 }
 
-function updateOrderStatus(idx, val) {
+// ============================================================
+// UPDATE ORDER STATUS (UPDATED)
+// ============================================================
+async function updateOrderStatus(idx, val) {
   const orders = getOrders();
   orders[idx].status = val;
-  setOrders(orders);
+  await setOrders(orders);
   showToast('Order status updated.', 'success');
   renderAdminDashboard();
 }
 
-function deleteOrder(idx) {
+// ============================================================
+// DELETE ORDER (UPDATED)
+// ============================================================
+async function deleteOrder(idx) {
   if (!confirm('Delete this order? This cannot be undone.')) return;
   const orders = getOrders();
   orders.splice(idx, 1);
-  setOrders(orders);
+  await setOrders(orders);
   renderOrdersTable();
   renderAdminDashboard();
   showToast('Order deleted.');
@@ -507,7 +619,10 @@ function previewNewProdImg(inp) {
   }
 }
 
-function addProduct() {
+// ============================================================
+// ADD PRODUCT (UPDATED)
+// ============================================================
+async function addProduct() {
   const name     = document.getElementById('newPName').value.trim();
   const cat      = document.getElementById('newPCat').value;
   const price    = parseInt(document.getElementById('newPPrice').value);
@@ -523,7 +638,7 @@ function addProduct() {
 
   const prods = getProducts();
   prods.push({ id: Date.now(), name, cat, price, oldPrice, desc, img, badge: null });
-  setProducts(prods);
+  await setProducts(prods);
 
   document.getElementById('newPName').value = '';
   document.getElementById('newPPrice').value = '';
@@ -533,7 +648,7 @@ function addProduct() {
   imgInp._data = null;
 
   renderProductsTable();
-  showToast('Product added. It is now live in the shop.', 'success');
+  showToast('Product added and synced to all devices.', 'success');
 }
 
 function openEditProduct(idx) {
@@ -561,7 +676,10 @@ function previewEditImg(inp) {
   }
 }
 
-function saveEditProduct() {
+// ============================================================
+// SAVE EDIT PRODUCT (UPDATED)
+// ============================================================
+async function saveEditProduct() {
   const idx   = parseInt(document.getElementById('editProdIdx').value);
   const prods = getProducts();
   prods[idx].name     = document.getElementById('editName').value;
@@ -569,17 +687,20 @@ function saveEditProduct() {
   prods[idx].oldPrice = parseInt(document.getElementById('editOldPrice').value) || null;
   prods[idx].desc     = document.getElementById('editDesc').value;
   if (editImgData) prods[idx].img = editImgData;
-  setProducts(prods);
+  await setProducts(prods);
   closeModal('editModal');
   renderProductsTable();
   showToast('Product updated.', 'success');
 }
 
-function deleteProduct(idx) {
+// ============================================================
+// DELETE PRODUCT (UPDATED)
+// ============================================================
+async function deleteProduct(idx) {
   if (!confirm('Delete this product? It will be removed from the shop immediately.')) return;
   const prods = getProducts();
   prods.splice(idx, 1);
-  setProducts(prods);
+  await setProducts(prods);
   renderProductsTable();
   showToast('Product deleted.', 'success');
 }
@@ -603,10 +724,13 @@ function renderSubsTable() {
   </tr>`).join('');
 }
 
-function removeSub(idx) {
+// ============================================================
+// REMOVE SUB (UPDATED)
+// ============================================================
+async function removeSub(idx) {
   const subs = getSubscribers();
   subs.splice(idx, 1);
-  setSubscribers(subs);
+  await setSubscribers(subs);
   renderSubsTable();
   showToast('Subscriber removed.');
 }
@@ -664,7 +788,10 @@ function loadSettingsUI() {
   }
 }
 
-function saveBankDetails() {
+// ============================================================
+// SAVE BANK DETAILS (UPDATED)
+// ============================================================
+async function saveBankDetails() {
   const s = getSettings();
   const name = document.getElementById('setBankName').value.trim();
   const accN = document.getElementById('setAccName').value.trim();
@@ -676,23 +803,29 @@ function saveBankDetails() {
   s.bankName = name;
   s.accName = accN;
   s.accNum = accU;
-  setSettings(s);
+  await setSettings(s);
   loadSettingsUI();
   showToast('Bank details saved. Customers will see these at checkout.', 'success');
 }
 
-function clearBankDetails() {
+// ============================================================
+// CLEAR BANK DETAILS (UPDATED)
+// ============================================================
+async function clearBankDetails() {
   if (!confirm('Remove bank details? Customers will see "Not configured" at checkout.')) return;
   const s = getSettings();
   delete s.bankName;
   delete s.accName;
   delete s.accNum;
-  setSettings(s);
+  await setSettings(s);
   loadSettingsUI();
   showToast('Bank details removed.');
 }
 
-function saveAdminEmail() {
+// ============================================================
+// SAVE ADMIN EMAIL (UPDATED)
+// ============================================================
+async function saveAdminEmail() {
   const email = document.getElementById('setAdminEmail').value.trim();
   if (!email) {
     showToast('Please enter an email.', 'error');
@@ -700,16 +833,19 @@ function saveAdminEmail() {
   }
   const s = getSettings();
   s.adminEmail = email;
-  setSettings(s);
+  await setSettings(s);
   loadSettingsUI();
   showToast('Notification email saved.', 'success');
 }
 
-function clearNotifEmail() {
+// ============================================================
+// CLEAR NOTIFICATION EMAIL (UPDATED)
+// ============================================================
+async function clearNotifEmail() {
   if (!confirm('Remove notification email?')) return;
   const s = getSettings();
   delete s.adminEmail;
-  setSettings(s);
+  await setSettings(s);
   loadSettingsUI();
   showToast('Notification email removed.');
 }
@@ -763,10 +899,17 @@ function showToast(msg, type) {
 }
 
 // ============================================================
-// INIT
+// INIT (UPDATED)
 // ============================================================
-updateCartCount();
-renderHomeProducts();
+async function init() {
+    await loadFromServer();
+    updateCartCount();
+    renderHomeProducts();
+    console.log('SlideWrld initialized with server sync');
+    console.log('Run testAPI() in console to test connection');
+}
+
+init();
 
 document.querySelectorAll('.modal-overlay').forEach(m =>
   m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); })
