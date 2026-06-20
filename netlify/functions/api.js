@@ -1,27 +1,9 @@
-
-// Data storage (in-memory - resets on deploy)
 let dataStore = {
   products: [],
   orders: [],
   subscribers: [],
   settings: {}
 };
-
-const defaultData = {
-  products: [],
-  orders: [],
-  subscribers: [],
-  settings: {}
-};
-
-function getData() {
-  return dataStore;
-}
-
-function saveData(data) {
-  dataStore = data;
-  return true;
-}
 
 exports.handler = async (event, context) => {
   const headers = {
@@ -42,30 +24,23 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 200,
         headers,
-        body: JSON.stringify(getData())
+        body: JSON.stringify(dataStore)
       };
 
     case 'save':
       try {
         const data = JSON.parse(event.body);
-        if (saveData(data)) {
-          return {
-            statusCode: 200,
-            headers,
-            body: JSON.stringify({ success: true, message: 'Data saved successfully' })
-          };
-        } else {
-          return {
-            statusCode: 500,
-            headers,
-            body: JSON.stringify({ success: false, error: 'Could not save data' })
-          };
-        }
+        dataStore = data;
+        return {
+          statusCode: 200,
+          headers,
+          body: JSON.stringify({ success: true })
+        };
       } catch (e) {
         return {
           statusCode: 400,
           headers,
-          body: JSON.stringify({ success: false, error: 'Invalid JSON data' })
+          body: JSON.stringify({ success: false, error: 'Invalid JSON' })
         };
       }
 
@@ -84,7 +59,7 @@ exports.handler = async (event, context) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'Invalid action. Use ?action=get, ?action=save, or ?action=ping' })
+        body: JSON.stringify({ error: 'Invalid action' })
       };
   }
 };
