@@ -6,7 +6,7 @@ const ADMIN_PASSWORD_DEFAULT = 'PeaceA29';
 // ============================================================
 // NETLIFY API CONFIGURATION
 // ============================================================
-const API_URL = '/api';
+const API_URL = '/.netlify/functions/api';
 
 let masterData = {
     products: [],
