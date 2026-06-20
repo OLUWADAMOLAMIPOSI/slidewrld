@@ -1,7 +1,5 @@
-const { getStore } = require('@netlify/blobs');
-
-const STORE_NAME = 'slidewrld-data';
-const DATA_KEY = 'store';
+const SUPABASE_URL = 'https://zaovyywfqykaghrgfiap.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_PzxqQfj9CvhyaDxWf79tGg_MPq_ViOY';
 
 const DEFAULT_DATA = {
   products: [],
@@ -22,15 +20,27 @@ exports.handler = async (event, context) => {
     return { statusCode: 200, headers, body: '' };
   }
 
-  const store = getStore(STORE_NAME);
   const url = new URL(event.rawUrl);
   const action = url.searchParams.get('action') || '';
+
+  const supabaseHeaders = {
+    'apikey': SUPABASE_KEY,
+    'Authorization': 'Bearer ' + SUPABASE_KEY,
+    'Content-Type': 'application/json'
+  };
 
   switch (action) {
     case 'get': {
       try {
-        const saved = await store.get(DATA_KEY, { type: 'json' });
-        const data = saved || DEFAULT_DATA;
+        const res = await fetch(
+          SUPABASE_URL + '/rest/v1/store_data?id=eq.1&select=data',
+          { headers: supabaseHeaders }
+        );
+        if (!res.ok) {
+          throw new Error('Supabase returned ' + res.status);
+        }
+        const rows = await res.json();
+        const data = (rows[0] && rows[0].data) || DEFAULT_DATA;
         return {
           statusCode: 200,
           headers,
@@ -48,7 +58,18 @@ exports.handler = async (event, context) => {
     case 'save': {
       try {
         const data = JSON.parse(event.body);
-        await store.setJSON(DATA_KEY, data);
+        const res = await fetch(
+          SUPABASE_URL + '/rest/v1/store_data?id=eq.1',
+          {
+            method: 'PATCH',
+            headers: supabaseHeaders,
+            body: JSON.stringify({ data: data, updated_at: new Date().toISOString() })
+          }
+        );
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error('Supabase returned ' + res.status + ': ' + errText);
+        }
         return {
           statusCode: 200,
           headers,
@@ -69,7 +90,7 @@ exports.handler = async (event, context) => {
         headers,
         body: JSON.stringify({
           status: 'ok',
-          message: 'SlideWrld API is running with persistent storage',
+          message: 'SlideWrld API is running with Supabase storage',
           timestamp: new Date().toISOString()
         })
       };
