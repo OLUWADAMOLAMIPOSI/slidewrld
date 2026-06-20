@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SlideWrld — Built On Pressure</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+ <link rel="icon" type="image/png" href="images/favicon.jpeg"  class="favicon">
+
+
+<style>
+:root {
+  --ground:#0A0A0A;
+  --ground-deep:#000000;
+  --panel:#141414;
+  --panel-light:#202020;
+  --heat:#FFFFFF;
+  --heat-dim:#D6D6D6;
+  --dust:#9C9C9C;
+  --bone:#F2F0EC;
+  --bone-dim:#A3A3A3;
+  --stone:#666666;
+  --line:#222222;
+  --line-light:#2E2E2E;
+  --white:#FFFFFF;
+  --ink:#0A0A0A;
+  --danger:#E0463C;
+  --success:#4F9D6E;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Space Grotesk',sans-serif;background:var(--ground);color:var(--bone);overflow-x:hidden;}
+h1,h2,h3,h4{font-family:'Anton',sans-serif;letter-spacing:0.01em;font-weight:400;text-transform:uppercase;}
+a{color:inherit;}
+::selection{background:var(--heat);color:var(--bone);}
+
+/* TREAD PATTERN - signature texture, used as structural rule throughout */
+.tread-rule{height:14px;background-image:repeating-linear-gradient(115deg,var(--heat) 0px,var(--heat) 3px,transparent 3px,transparent 22px);opacity:0.7;}
+.tread-rule-thin{height:6px;background-image:repeating-linear-gradient(115deg,var(--dust) 0px,var(--dust) 2px,transparent 2px,transparent 16px);opacity:0.35;}
+
+/* MARQUEE - kinetic ticker, sits beneath the nav and opens the page in motion */
+.marquee-strip{margin-top:76px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--ground-deep);overflow:hidden;white-space:nowrap;position:relative;}
+.marquee-track{display:inline-flex;animation:marquee-scroll 26s linear infinite;}
+.marquee-track span{display:inline-flex;align-items:center;font-family:'JetBrains Mono',monospace;font-size:0.76rem;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--bone-dim);padding:0.85rem 0;}
+.marquee-track span::after{content:'/';margin:0 1.8rem;color:var(--stone);}
+@keyframes marquee-scroll{0%{transform:translateX(0);}100%{transform:translateX(-50%);}}
+
+/* NAV */
+.nav{position:fixed;top:0;left:0;right:0;z-index:900;background:rgba(0,0,0,0.85);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);}
+.nav-inner{max-width:1240px;margin:0 auto;padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:76px;}
+.logo{font-family:'Anton',sans-serif;font-size:1.6rem;letter-spacing:0.02em;color:var(--bone);text-decoration:none;cursor:pointer;text-transform:uppercase;}
+.logo span{color:var(--heat);}
+.nav-links{display:flex;gap:2.2rem;align-items:center;list-style:none;}
+.nav-links a{text-decoration:none;color:var(--bone-dim);font-size:0.8rem;font-weight:500;letter-spacing:0.07em;text-transform:uppercase;transition:color 0.2s;cursor:pointer;}
+.nav-links a:hover{color:var(--heat);}
+.nav-actions{display:flex;gap:1rem;align-items:center;}
+.btn{display:inline-flex;align-items:center;gap:0.5rem;padding:0.75rem 1.6rem;border-radius:1px;font-family:'Space Grotesk',sans-serif;font-size:0.8rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;text-decoration:none;border:1px solid transparent;}
+.btn-primary{background:var(--heat);color:var(--ink);}
+.btn-primary:hover{background:var(--heat-dim);}
+.btn-outline{background:transparent;color:var(--bone);border:1px solid var(--line-light);}
+.btn-outline:hover{border-color:var(--heat);color:var(--heat);}
+.btn-danger{background:var(--danger);color:var(--bone);}
+.btn-danger:hover{background:#B5392F;}
+.cart-btn{position:relative;background:none;border:none;cursor:pointer;color:var(--bone);padding:0.3rem;display:flex;align-items:center;gap:0.5rem;font-size:0.9rem;}
+.cart-count{background:var(--heat);color:var(--ink);border-radius:50%;width:19px;height:19px;font-size:0.66rem;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'JetBrains Mono',monospace;}
+
+/* HAMBURGER */
+.hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:5px;z-index:1000;}
+.hamburger span{display:block;width:24px;height:2px;background:var(--bone);transition:all 0.25s ease;}
+.hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
+.hamburger.active span:nth-child(2){opacity:0;}
+.hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
+
+.admin-hamburger{display:none;flex-direction:column;gap:5px;background:none;border:none;cursor:pointer;padding:10px 14px;z-index:1000;position:fixed;top:10px;left:10px;}
+.admin-hamburger span{display:block;width:24px;height:2px;background:var(--bone);transition:all 0.25s ease;}
+.admin-hamburger.active span:nth-child(1){transform:rotate(45deg) translate(5px,5px);}
+.admin-hamburger.active span:nth-child(2){opacity:0;}
+.admin-hamburger.active span:nth-child(3){transform:rotate(-45deg) translate(5px,-5px);}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+
+/* HERO - the footstep impression pressed into hot ground */
+.hero{position:relative;min-height:92vh;display:flex;align-items:center;padding:5rem 2rem 4rem;max-width:1240px;margin:0 auto;overflow:hidden;}
+.hero-wordmark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:'Anton',sans-serif;font-size:clamp(8rem,28vw,22rem);line-height:1;color:transparent;-webkit-text-stroke:1px rgba(242,240,236,0.06);white-space:nowrap;z-index:0;pointer-events:none;user-select:none;letter-spacing:0.01em;}
+.hero-ground{position:absolute;right:-8%;top:50%;transform:translateY(-50%);width:640px;height:640px;opacity:0.9;z-index:0;}
+.hero-ground svg{width:100%;height:100%;}
+.hero-content{position:relative;z-index:2;max-width:640px;}
+.hero-tag{display:inline-flex;align-items:center;gap:0.6rem;font-size:0.74rem;letter-spacing:0.16em;text-transform:uppercase;color:var(--heat);font-weight:600;margin-bottom:1.8rem;font-family:'JetBrains Mono',monospace;opacity:0;animation:hero-rise 0.7s ease forwards 0.1s;}
+.hero-tag::before{content:'';width:22px;height:2px;background:var(--heat);}
+.hero h1{font-size:clamp(3.2rem,8.6vw,6.4rem);line-height:0.92;color:var(--bone);margin-bottom:1.5rem;opacity:0;animation:hero-rise 0.8s ease forwards 0.25s;}
+.hero h1 .accent{color:transparent;-webkit-text-stroke:1.5px var(--bone);display:inline-block;}
+.hero p{font-size:1.05rem;color:var(--bone-dim);line-height:1.75;margin-bottom:2.3rem;max-width:460px;opacity:0;animation:hero-rise 0.8s ease forwards 0.4s;}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap;opacity:0;animation:hero-rise 0.8s ease forwards 0.55s;}
+.hero-meta{display:flex;gap:0;margin-top:3.2rem;flex-wrap:wrap;border-top:1px solid var(--line);padding-top:1.6rem;opacity:0;animation:hero-rise 0.8s ease forwards 0.7s;}
+.hero-meta-item{padding-right:2.4rem;margin-right:2.4rem;border-right:1px solid var(--line);transition:transform 0.25s ease;}
+.hero-meta-item:hover{transform:translateY(-3px);}
+.hero-meta-item:last-child{border-right:none;}
+.hero-meta-item strong{display:block;font-family:'Anton',sans-serif;font-size:1.8rem;color:var(--heat);}
+.hero-meta-item span{font-size:0.72rem;color:var(--stone);text-transform:uppercase;letter-spacing:0.08em;font-family:'JetBrains Mono',monospace;}
+.hero-scroll-cue{position:absolute;left:2rem;bottom:1.6rem;display:flex;align-items:center;gap:0.7rem;z-index:2;opacity:0;animation:hero-rise 0.8s ease forwards 1s;}
+.hero-scroll-cue span{font-family:'JetBrains Mono',monospace;font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--stone);writing-mode:vertical-rl;}
+.hero-scroll-cue .scroll-line{width:1px;height:46px;background:var(--line-light);position:relative;overflow:hidden;}
+.hero-scroll-cue .scroll-line::after{content:'';position:absolute;top:-100%;left:0;width:100%;height:100%;background:var(--bone);animation:scroll-drip 1.8s ease-in-out infinite;}
+@keyframes hero-rise{from{opacity:0;transform:translateY(18px);}to{opacity:1;transform:translateY(0);}}
+@keyframes scroll-drip{0%{top:-100%;}60%{top:100%;}100%{top:100%;}}
+@media (prefers-reduced-motion:reduce){
+  .hero-tag,.hero h1,.hero p,.hero-actions,.hero-meta,.hero-scroll-cue{animation:none;opacity:1;}
+  .marquee-track{animation:none;}
+  .hero-scroll-cue .scroll-line::after{animation:none;}
+}
+
+/* SECTIONS */
+.section{padding:6rem 2rem;}
+.section-inner{max-width:1240px;margin:0 auto;}
+.section-header{margin-bottom:1.2rem;display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:1rem;}
+.section-header h2{font-size:2.6rem;color:var(--bone);}
+.section-header p{color:var(--stone);font-size:0.86rem;max-width:320px;text-align:right;}
+.eyebrow{font-size:0.74rem;font-weight:600;letter-spacing:0.18em;text-transform:uppercase;color:var(--heat);margin-bottom:0.6rem;display:block;font-family:'JetBrains Mono',monospace;}
+.section-divider{margin-bottom:2.8rem;}
+
+/* CATEGORY STRIP */
+.cat-strip{display:flex;gap:0.7rem;flex-wrap:wrap;padding:0 2rem 3rem;max-width:1240px;margin:0 auto;}
+.cat-pill{background:var(--panel);border:1px solid var(--line-light);color:var(--bone-dim);padding:0.6rem 1.4rem;border-radius:1px;font-size:0.78rem;letter-spacing:0.05em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;font-family:'Space Grotesk',sans-serif;font-weight:500;}
+.cat-pill:hover,.cat-pill.active{border-color:var(--heat);color:var(--heat);background:var(--ground-deep);}
+
+/* PRODUCTS - footbed shaped card */
+.products-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:1.6rem;}
+.product-card{background:var(--panel);border:1px solid var(--line-light);overflow:hidden;transition:border-color 0.25s,transform 0.25s;cursor:pointer;position:relative;}
+.product-card:hover{border-color:var(--heat-dim);transform:translateY(-4px);}
+.product-img-wrap{position:relative;height:260px;background:var(--ground-deep);display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.product-img-wrap img{width:100%;height:100%;object-fit:cover;transition:transform 0.4s;}
+.product-card:hover .product-img-wrap img{transform:scale(1.05);}
+.product-badge-tag{position:absolute;top:0;left:0;background:var(--heat);color:var(--ink);font-size:0.66rem;padding:5px 12px;font-weight:700;letter-spacing:0.07em;text-transform:uppercase;font-family:'JetBrains Mono',monospace;}
+.product-info{padding:1.3rem;}
+.product-name{font-family:'Anton',sans-serif;font-size:1.3rem;color:var(--bone);margin-bottom:0.4rem;letter-spacing:0.01em;}
+.product-desc-short{font-size:0.82rem;color:var(--stone);margin-bottom:1.1rem;line-height:1.6;}
+.product-footer{display:flex;align-items:center;justify-content:space-between;}
+.product-price{font-size:1.05rem;font-weight:600;color:var(--heat);font-family:'JetBrains Mono',monospace;}
+.product-price del{font-size:0.76rem;color:var(--stone);margin-right:0.5rem;font-weight:400;}
+.add-to-cart-btn{background:transparent;color:var(--bone);border:1px solid var(--line-light);padding:0.5rem 1rem;font-size:0.72rem;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;transition:all 0.2s;font-family:'Space Grotesk',sans-serif;}
+.add-to-cart-btn:hover{border-color:var(--heat);color:var(--heat);}
+
+/* FEATURED */
+.featured-section{background:var(--panel);border-top:1px solid var(--line);border-bottom:1px solid var(--line);position:relative;}
+.featured-grid{display:grid;grid-template-columns:0.9fr 1.1fr;gap:4rem;align-items:center;}
+.featured-img{position:relative;height:480px;background:var(--ground-deep);overflow:hidden;border:1px solid var(--line-light);}
+.featured-img img{width:100%;height:100%;object-fit:cover;}
+.featured-text h2{font-size:2.8rem;color:var(--bone);line-height:1.08;margin-bottom:1.2rem;}
+.featured-text p{color:var(--bone-dim);line-height:1.8;margin-bottom:1.8rem;}
+.features-list{list-style:none;margin-bottom:2.2rem;}
+.features-list li{display:flex;align-items:baseline;gap:0.8rem;margin-bottom:0.8rem;font-size:0.92rem;color:var(--bone-dim);}
+.features-list li::before{content:'';width:10px;height:3px;background:var(--heat);flex-shrink:0;}
+
+/* NEWSLETTER */
+.newsletter-section{background:var(--ground);position:relative;border-top:1px solid var(--line);}
+.newsletter-inner{text-align:left;max-width:620px;}
+.newsletter-inner h2{font-size:2.3rem;color:var(--bone);margin-bottom:0.9rem;}
+.newsletter-inner p{color:var(--stone);margin-bottom:2rem;max-width:460px;}
+.newsletter-form{display:flex;gap:0;max-width:480px;border:1px solid var(--line-light);}
+.newsletter-form input{flex:1;padding:0.9rem 1.2rem;border:none;font-family:'Space Grotesk',sans-serif;font-size:0.88rem;background:var(--panel);color:var(--bone);}
+.newsletter-form input::placeholder{color:var(--stone);}
+.newsletter-form input:focus{outline:none;background:var(--panel-light);}
+.newsletter-form .btn{border-radius:0;}
+
+/* TESTIMONIALS */
+.testimonials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);}
+.testi-card{background:var(--ground);padding:2rem;}
+.testi-mark{font-family:'Anton',sans-serif;font-size:2.4rem;color:var(--heat-dim);line-height:1;margin-bottom:0.6rem;}
+.testi-text{color:var(--bone-dim);line-height:1.75;margin-bottom:1.4rem;font-size:0.9rem;}
+.testi-author{display:flex;align-items:center;gap:0.8rem;border-top:1px solid var(--line);padding-top:1.1rem;}
+.testi-avatar{width:34px;height:34px;border:1px solid var(--heat-dim);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.74rem;color:var(--heat);font-family:'Anton',sans-serif;}
+.testi-name{font-weight:600;font-size:0.86rem;color:var(--bone);}
+.testi-loc{font-size:0.76rem;color:var(--stone);font-family:'JetBrains Mono',monospace;}
+
+/* FOOTER */
+footer{background:var(--panel);color:var(--bone-dim);padding:4rem 2rem 2rem;border-top:1px solid var(--line);}
+.footer-inner{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:3rem;margin-bottom:3rem;}
+footer h4{font-family:'Anton',sans-serif;color:var(--bone);margin-bottom:1.1rem;font-size:1rem;letter-spacing:0.04em;}
+footer p,footer a{font-size:0.85rem;color:var(--stone);text-decoration:none;display:block;margin-bottom:0.5rem;line-height:1.7;}
+footer a:hover{color:var(--heat);}
+.footer-logo{font-family:'Anton',sans-serif;font-size:1.5rem;color:var(--bone);margin-bottom:0.9rem;letter-spacing:0.02em;}
+.footer-logo span{color:var(--heat);}
+.footer-bottom{border-top:1px solid var(--line);padding-top:1.5rem;text-align:center;font-size:0.8rem;color:var(--stone);font-family:'JetBrains Mono',monospace;}
+.footer-social{display:flex;gap:0.8rem;margin-top:1.1rem;}
+.social-icon{width:36px;height:36px;border:1px solid var(--line-light);display:flex;align-items:center;justify-content:center;color:var(--bone-dim);text-decoration:none;font-size:0.8rem;transition:all 0.2s;}
+.social-icon:hover{border-color:var(--heat);color:var(--heat);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.88);z-index:2000;display:none;align-items:center;justify-content:center;padding:1rem;backdrop-filter:blur(3px);}
+.modal-overlay.open{display:flex;}
+.modal{background:var(--panel);border:1px solid var(--line-light);max-width:560px;width:100%;max-height:90vh;overflow-y:auto;padding:2.4rem;position:relative;}
+.modal-close{position:absolute;top:1.2rem;right:1.2rem;background:var(--panel-light);border:1px solid var(--line-light);width:32px;height:32px;cursor:pointer;font-size:0.95rem;color:var(--bone);display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{border-color:var(--heat);color:var(--heat);}
+.modal h3{font-size:1.7rem;color:var(--bone);margin-bottom:0.4rem;}
+.modal .product-detail-price{font-size:1.3rem;color:var(--heat);font-weight:600;margin-bottom:1.1rem;font-family:'JetBrains Mono',monospace;}
+.modal img.modal-prod-img{width:100%;height:260px;object-fit:cover;margin-bottom:1.5rem;border:1px solid var(--line-light);}
+.qty-wrap{display:flex;align-items:center;gap:1.2rem;margin:1.3rem 0;}
+.qty-btn{width:32px;height:32px;border:1px solid var(--line-light);background:none;color:var(--bone);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.qty-btn:hover{border-color:var(--heat);color:var(--heat);}
+.qty-display{font-size:1rem;font-weight:600;min-width:24px;text-align:center;font-family:'JetBrains Mono',monospace;}
+
+/* CART SIDEBAR */
+.cart-sidebar{position:fixed;right:0;top:0;bottom:0;width:400px;background:var(--panel);z-index:1800;box-shadow:-10px 0 40px rgba(0,0,0,0.5);transform:translateX(100%);transition:transform 0.3s;display:flex;flex-direction:column;border-left:1px solid var(--line-light);}
+.cart-sidebar.open{transform:translateX(0);}
+.cart-header{padding:1.6rem 2rem;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;}
+.cart-header h3{font-size:1.4rem;color:var(--bone);}
+.cart-items{flex:1;overflow-y:auto;padding:1.5rem 2rem;}
+.cart-item{display:flex;gap:1rem;padding:1rem 0;border-bottom:1px solid var(--line);}
+.cart-item-img{width:68px;height:68px;object-fit:cover;background:var(--ground-deep);border:1px solid var(--line-light);}
+.cart-item-info{flex:1;}
+.cart-item-name{font-weight:500;font-size:0.88rem;color:var(--bone);margin-bottom:0.2rem;}
+.cart-item-price{color:var(--heat);font-weight:600;font-size:0.88rem;font-family:'JetBrains Mono',monospace;}
+.cart-item-qty{font-size:0.78rem;color:var(--stone);}
+.cart-item-remove{background:none;border:none;color:var(--stone);cursor:pointer;font-size:1rem;}
+.cart-item-remove:hover{color:var(--danger);}
+.cart-footer{padding:1.6rem 2rem;border-top:1px solid var(--line);}
+.cart-total{display:flex;justify-content:space-between;font-weight:600;margin-bottom:1.3rem;font-size:1.05rem;color:var(--bone);font-family:'JetBrains Mono',monospace;}
+.empty-cart{text-align:center;padding:3rem 1rem;color:var(--stone);}
+.empty-cart p{font-size:0.88rem;line-height:1.6;}
+
+/* CHECKOUT */
+.checkout-wrap{max-width:960px;margin:0 auto;padding:2rem;padding-top:110px;display:grid;grid-template-columns:1fr 360px;gap:2rem;}
+.checkout-form-section,.order-summary{background:var(--panel);border:1px solid var(--line-light);padding:2.2rem;height:fit-content;}
+.checkout-form-section h2{font-size:1.7rem;color:var(--bone);margin-bottom:1.6rem;}
+.form-group{margin-bottom:1.3rem;}
+.form-group label{display:block;font-size:0.78rem;font-weight:600;color:var(--bone-dim);margin-bottom:0.5rem;text-transform:uppercase;letter-spacing:0.05em;}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:0.8rem 1rem;border:1px solid var(--line-light);font-family:'Space Grotesk',sans-serif;font-size:0.9rem;color:var(--bone);background:var(--ground-deep);transition:border-color 0.2s;}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--heat);}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.bank-details-box{background:var(--panel-light);padding:1.3rem;margin:1.6rem 0;border:1px solid var(--line-light);border-left:3px solid var(--heat);}
+.bank-details-box h4{color:var(--bone);font-size:0.95rem;margin-bottom:0.9rem;font-family:'Space Grotesk',sans-serif;font-weight:600;}
+.bank-row{display:flex;justify-content:space-between;font-size:0.86rem;padding:0.4rem 0;color:var(--bone-dim);}
+.bank-row strong{color:var(--bone);font-family:'JetBrains Mono',monospace;}
+.whatsapp-confirm{display:flex;align-items:center;gap:0.8rem;background:var(--panel-light);border-radius:0;padding:1rem 1.2rem;text-decoration:none;color:var(--bone);font-size:0.85rem;font-weight:500;transition:all 0.2s;margin-top:0.9rem;border:1px solid var(--line-light);}
+.whatsapp-confirm:hover{border-color:var(--heat);color:var(--heat);}
+.whatsapp-confirm svg{width:20px;height:20px;flex-shrink:0;}
+.order-summary h3{font-size:1.2rem;color:var(--bone);margin-bottom:1.1rem;}
+.summary-item{display:flex;justify-content:space-between;font-size:0.86rem;padding:0.5rem 0;color:var(--bone-dim);border-bottom:1px solid var(--line);}
+.summary-total{display:flex;justify-content:space-between;font-weight:600;font-size:1.05rem;color:var(--bone);margin-top:0.9rem;padding-top:0.9rem;border-top:1px solid var(--line);font-family:'JetBrains Mono',monospace;}
+.upload-proof{border:1px dashed var(--line-light);padding:1.6rem;text-align:center;cursor:pointer;transition:all 0.2s;}
+.upload-proof:hover{border-color:var(--heat);background:var(--ground-deep);}
+.upload-proof p{font-size:0.84rem;color:var(--stone);}
+.proof-preview{max-width:100%;max-height:140px;margin-top:0.9rem;display:none;border:1px solid var(--line-light);}
+
+/* ORDER SUCCESS */
+.success-wrap{max-width:560px;margin:130px auto;text-align:center;padding:2rem;}
+.success-wrap h2{font-size:2.3rem;color:var(--bone);margin-bottom:0.9rem;}
+.success-wrap p{color:var(--bone-dim);line-height:1.8;}
+.success-icon-mark{width:70px;height:70px;border:1px solid var(--heat);display:flex;align-items:center;justify-content:center;margin:0 auto 1.6rem;font-size:1.7rem;color:var(--heat);}
+
+/* ADMIN AUTH */
+.auth-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ground);padding:2rem;}
+.auth-card{background:var(--panel);padding:3rem;max-width:420px;width:100%;border:1px solid var(--line-light);}
+.auth-card .brand{font-family:'Anton',sans-serif;font-size:1.5rem;color:var(--bone);margin-bottom:0.4rem;letter-spacing:0.02em;}
+.auth-card .brand span{color:var(--heat);}
+.auth-card h2{font-size:1.5rem;color:var(--bone);margin-bottom:0.5rem;font-family:'Anton',sans-serif;}
+.auth-card .sub{font-size:0.84rem;color:var(--stone);margin-bottom:2.2rem;}
+.auth-error{background:rgba(193,67,43,0.12);color:var(--danger);border:1px solid var(--danger);padding:0.7rem 0.9rem;font-size:0.82rem;margin-bottom:1.1rem;display:none;}
+
+/* ADMIN PANEL */
+.admin-wrap{display:flex;min-height:100vh;position:relative;}
+.admin-sidebar{width:240px;background:var(--panel);padding:2rem 0;flex-shrink:0;position:fixed;top:0;bottom:0;left:0;z-index:800;display:flex;flex-direction:column;transition:transform 0.3s ease;border-right:1px solid var(--line);}
+.admin-logo{padding:0 1.6rem 1.6rem;border-bottom:1px solid var(--line);margin-bottom:1rem;}
+.admin-logo p{font-family:'Anton',sans-serif;font-size:1.3rem;color:var(--bone);letter-spacing:0.02em;}
+.admin-logo p span{color:var(--heat);}
+.admin-logo small{font-size:0.7rem;color:var(--stone);text-transform:uppercase;letter-spacing:0.06em;font-family:'JetBrains Mono',monospace;}
+.admin-nav-link{display:flex;align-items:center;gap:0.9rem;padding:0.8rem 1.6rem;color:var(--stone);text-decoration:none;font-size:0.84rem;letter-spacing:0.03em;transition:all 0.2s;cursor:pointer;border:none;background:none;width:100%;text-align:left;font-family:'Space Grotesk',sans-serif;border-left:2px solid transparent;}
+.admin-nav-link:hover,.admin-nav-link.active{background:var(--panel-light);color:var(--heat);border-left-color:var(--heat);}
+.admin-nav-link .nav-icon{width:18px;text-align:center;font-family:'JetBrains Mono',monospace;}
+.admin-logout-btn{margin-top:auto;border-top:1px solid var(--line);padding-top:0.5rem;}
+.admin-main{margin-left:240px;flex:1;padding:2.6rem;background:var(--ground);min-height:100vh;transition:margin-left 0.3s ease;}
+.admin-topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:2.2rem;}
+.admin-topbar h1{font-size:1.9rem;color:var(--bone);}
+.admin-section{display:none;}
+.admin-section.active{display:block;}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);margin-bottom:2.6rem;}
+.stat-card{background:var(--panel);padding:1.5rem;}
+.stat-label{font-size:0.72rem;color:var(--stone);margin-bottom:0.6rem;text-transform:uppercase;letter-spacing:0.08em;}
+.stat-value{font-size:2.1rem;color:var(--bone);font-family:'Anton',sans-serif;}
+.stat-sub{font-size:0.74rem;color:var(--stone);margin-top:0.3rem;font-family:'JetBrains Mono',monospace;}
+.admin-card{background:var(--panel);padding:1.8rem;border:1px solid var(--line);margin-bottom:1.5rem;}
+.admin-card h3{font-size:1.2rem;color:var(--bone);margin-bottom:1.3rem;}
+.admin-table{width:100%;border-collapse:collapse;font-size:0.86rem;}
+.admin-table th{text-align:left;padding:0.7rem 1rem;background:var(--panel-light);color:var(--bone-dim);font-weight:600;font-size:0.74rem;text-transform:uppercase;letter-spacing:0.05em;}
+.admin-table td{padding:0.85rem 1rem;border-bottom:1px solid var(--line);color:var(--bone-dim);vertical-align:middle;}
+.admin-table tr:hover td{background:var(--panel-light);}
+.admin-table tr:last-child td{border-bottom:none;}
+.status-badge{display:inline-block;padding:3px 10px;font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;border:1px solid;font-family:'JetBrains Mono',monospace;}
+.status-pending{color:var(--dust);border-color:var(--dust);}
+.status-confirmed{color:var(--success);border-color:var(--success);}
+.status-shipped{color:#5C8FB0;border-color:#5C8FB0;}
+.product-manage-img{width:48px;height:48px;object-fit:cover;background:var(--ground-deep);border:1px solid var(--line-light);}
+.action-btn{background:none;border:none;cursor:pointer;padding:0.3rem 0.6rem;font-size:0.78rem;font-family:'Space Grotesk',sans-serif;font-weight:600;text-transform:uppercase;letter-spacing:0.03em;}
+.action-edit{color:var(--heat);}
+.action-edit:hover{text-decoration:underline;}
+.action-delete{color:var(--danger);}
+.action-delete:hover{text-decoration:underline;}
+.upload-area{border:1px dashed var(--line-light);padding:2rem;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--ground-deep);}
+.upload-area:hover{border-color:var(--heat);background:var(--panel-light);}
+.upload-area p{color:var(--stone);font-size:0.88rem;}
+.upload-area strong{color:var(--heat);}
+.upload-preview-img{max-width:100%;max-height:160px;margin-top:0.9rem;display:none;border:1px solid var(--line-light);}
+.tag{display:inline-block;background:var(--panel-light);color:var(--heat);font-size:0.72rem;padding:3px 10px;font-weight:600;text-transform:uppercase;letter-spacing:0.04em;border:1px solid var(--line-light);}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 0;border-bottom:1px solid var(--line);}
+.settings-row:last-child{border-bottom:none;}
+.settings-val{font-size:0.9rem;color:var(--bone);font-weight:500;font-family:'JetBrains Mono',monospace;}
+.settings-key{font-size:0.8rem;color:var(--stone);text-transform:uppercase;letter-spacing:0.04em;}
+
+/* TOAST */
+.toast{position:fixed;bottom:2rem;right:2rem;background:var(--panel);color:var(--bone);border:1px solid var(--heat);padding:1rem 1.5rem;font-size:0.86rem;z-index:9999;transform:translateY(120px);opacity:0;transition:all 0.35s;max-width:300px;}
+.toast.show{transform:translateY(0);opacity:1;}
+.toast.success{border-color:var(--success);}
+.toast.error{border-color:var(--danger);}
+
+/* WHATSAPP FLOAT */
+.wa-float{position:fixed;bottom:2rem;left:2rem;z-index:1000;display:flex;align-items:center;gap:0.7rem;background:var(--panel);border:1px solid var(--heat);color:var(--bone);padding:0.8rem 1.3rem;text-decoration:none;font-size:0.82rem;font-weight:600;letter-spacing:0.03em;transition:all 0.2s;}
+.wa-float:hover{background:var(--heat);color:var(--bone);}
+.wa-float svg{width:19px;height:19px;}
+
+/* MOBILE RESPONSIVE */
+@media(max-width:768px){
+  .hero{padding:3rem 1.5rem 3rem;min-height:auto;}
+  .hero-wordmark{font-size:clamp(5rem,32vw,9rem);}
+  .hero-ground{width:380px;height:380px;opacity:0.5;right:-15%;}
+  .hero-meta{gap:0;}
+  .hero-meta-item{padding-right:1.4rem;margin-right:1.4rem;}
+  .hero-scroll-cue{display:none;}
+  .marquee-track span{font-size:0.66rem;}
+  .featured-grid{grid-template-columns:1fr;}
+  .featured-img{height:320px;}
+  .footer-inner{grid-template-columns:1fr 1fr;}
+  .checkout-wrap{grid-template-columns:1fr;}
+  .section-header{flex-direction:column;}
+  .section-header p{text-align:left;}
+
+  .admin-hamburger{display:flex;}
+  .admin-sidebar{transform:translateX(-100%);width:270px;}
+  .admin-sidebar.open{transform:translateX(0);}
+  .admin-main{margin-left:0;padding:1.5rem;padding-top:75px;}
+
+  .hamburger{display:flex;}
+  #navShopBtn{display:none;}
+  .nav-links{
+    display:none;position:absolute;top:76px;left:0;right:0;
+    background:rgba(0,0,0,0.97);backdrop-filter:blur(12px);
+    flex-direction:column;align-items:flex-start;padding:1.6rem 2rem;gap:1.1rem;
+    border-bottom:1px solid var(--line);
+  }
+  .nav-links.active{display:flex;}
+  .nav-links a{font-size:0.95rem;padding:0.5rem 0;width:100%;border-bottom:1px solid var(--line);}
+  .nav-links a:last-child{border-bottom:none;}
+  .cart-sidebar{width:100%;}
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav class="nav" id="mainNav">
+  <div class="nav-inner">
+    <span class="logo" onclick="showPage('home')">Slide<span>Wrld</span></span>
+
+    <ul class="nav-links" id="navLinks">
+      <li><a onclick="showPage('home')">Home</a></li>
+      <li><a onclick="showPage('shop')">Shop</a></li>
+      <li><a onclick="scrollToSection('featured-section');showPage('home')">Featured</a></li>
+      <li><a onclick="scrollToSection('newsletter-section');showPage('home')">Newsletter</a></li>
+    </ul>
+
+    <div class="nav-actions">
+      <button class="hamburger" id="hamburgerBtn" onclick="toggleMenu()" aria-label="Toggle menu">
+        <span></span><span></span><span></span>
+      </button>
+
+      <button class="cart-btn" onclick="toggleCart()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+      <button class="btn btn-primary" id="navShopBtn" onclick="showPage('shop')">Shop Now</button>
+    </div>
+  </div>
+</nav>
+
+<!-- CART SIDEBAR -->
+<div class="cart-sidebar" id="cartSidebar">
+  <div class="cart-header">
+    <h3>Your Bag</h3>
+    <button class="modal-close" onclick="toggleCart()">X</button>
+  </div>
+  <div class="cart-items" id="cartItemsEl"></div>
+  <div class="cart-footer">
+    <div class="cart-total"><span>Total</span><span id="cartTotalEl">0</span></div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="proceedCheckout()">Checkout</button>
+  </div>
+</div>
+
+<!-- ===== HOME PAGE ===== -->
+<div class="page active" id="page-home">
+  <div class="marquee-strip" aria-hidden="true">
+    <div class="marquee-track">
+      <span>Built On Pressure</span><span>Made In Nigeria</span><span>Limited Drops</span><span>10K+ Pairs Moved</span><span>Worldwide Shipping</span>
+      <span>Built On Pressure</span><span>Made In Nigeria</span><span>Limited Drops</span><span>10K+ Pairs Moved</span><span>Worldwide Shipping</span>
+    </div>
+  </div>
+
+  <section class="hero">
+    <div class="hero-wordmark" aria-hidden="true">WRLD</div>
+    <div class="hero-ground" aria-hidden="true">
+      <svg viewBox="0 0 600 600" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="groundFade" cx="50%" cy="50%" r="55%">
+            <stop offset="0%" stop-color="#F2F0EC" stop-opacity="0.10"/>
+            <stop offset="100%" stop-color="#F2F0EC" stop-opacity="0"/>
+          </radialGradient>
+        </defs>
+        <circle cx="300" cy="300" r="280" fill="url(#groundFade)"/>
+        <g stroke="#F2F0EC" stroke-width="2" fill="none" opacity="0.6">
+          <ellipse cx="300" cy="220" rx="95" ry="118"/>
+          <ellipse cx="300" cy="420" rx="80" ry="100"/>
+        </g>
+        <g stroke="#5C5C5C" stroke-width="1.4" fill="none" opacity="0.55">
+          <path d="M240 150 L240 290"/>
+          <path d="M270 140 L270 300"/>
+          <path d="M300 138 L300 302"/>
+          <path d="M330 140 L330 300"/>
+          <path d="M360 150 L360 290"/>
+          <path d="M250 340 L250 500"/>
+          <path d="M280 330 L280 510"/>
+          <path d="M300 328 L300 512"/>
+          <path d="M320 330 L320 510"/>
+          <path d="M350 340 L350 500"/>
+        </g>
+        <circle cx="300" cy="300" r="280" stroke="#2E2E2E" stroke-width="1" fill="none" stroke-dasharray="2 14"/>
+      </svg>
+    </div>
+    <div class="hero-content">
+      <span class="hero-tag">Made For The Streets</span>
+      <h1>Built On<br><span class="accent">Pressure.</span></h1>
+      <p>SlideWrld designs slides for men who do not sit still. Premium materials, clean silhouettes, and details that hold up after the third wash. Nigerian made. Worldwide energy.</p>
+      <div class="hero-actions">
+        <button class="btn btn-primary" onclick="showPage('shop')">Shop The Drop</button>
+        <button class="btn btn-outline" onclick="scrollToSection('featured-section')">See Featured</button>
+      </div>
+      <div class="hero-meta">
+        <div class="hero-meta-item"><strong>10K+</strong><span>Pairs Moved</span></div>
+        <div class="hero-meta-item"><strong>NG</strong><span>Made Locally</span></div>
+        <div class="hero-meta-item"><strong>48HR</strong><span>Dispatch Time</span></div>
+      </div>
+    </div>
+    <div class="hero-scroll-cue" aria-hidden="true">
+      <div class="scroll-line"></div>
+      <span>Scroll</span>
+    </div>
+  </section>
+
+  <div class="tread-rule"></div>
+
+  <div class="cat-strip">
+    <button class="cat-pill" onclick="filterCat('all');showPage('shop')">All Slides</button>
+    <button class="cat-pill" onclick="filterCat('classic');showPage('shop')">Classic</button>
+    <button class="cat-pill" onclick="filterCat('strapped');showPage('shop')">Strapped</button>
+    <button class="cat-pill" onclick="filterCat('woven');showPage('shop')">Woven</button>
+    <button class="cat-pill" onclick="filterCat('limited');showPage('shop')">Limited Run</button>
+  </div>
+
+   <section class="section featured-section" id="featured-section">
+    <div class="section-inner featured-grid">
+      <div class="featured-img" id="featuredImgSlot">
+        <img src="images/nike.jpg" alt="Featured Slide" style="width:100%;height:100%;object-fit:cover;">
+      </div>
+      <div class="featured-text">
+        <span class="eyebrow">— Featured Drop</span>
+        <h2>The Lagos Strap — Limited Run</h2>
+        <p>Built from molded EVA foam and finished with a hand-stitched woven strap. This is the slide we get tagged in the most. Once this batch is gone, it does not come back.</p>
+        <ul class="features-list">
+          <li>Molded footbed with arch support</li>
+          <li>Woven strap, reinforced stitching</li>
+          <li>Non-slip rubber base</li>
+          <li>Available in three colourways</li>
+        </ul>
+        <button class="btn btn-primary" onclick="showPage('shop')">Shop The Drop</button>
+      </div>
+    </div>
+  </section>
+
+  <div class="tread-rule-thin"></div>
+
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">New In</span>
+          <h2>Fresh On The Rack</h2>
+        </div>
+        <p>Every pair is checked by hand before it ships. No shortcuts on quality control.</p>
+      </div>
+      <div class="section-divider"></div>
+      <div class="products-grid" id="homeProductGrid"></div>
+      <div style="text-align:center;margin-top:3rem;">
+        <button class="btn btn-outline" onclick="showPage('shop')">View Full Catalogue</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section newsletter-section" id="newsletter-section">
+    <div class="section-inner newsletter-inner">
+      <span class="eyebrow">Stay Posted</span>
+      <h2>Get Notified Before Everyone Else</h2>
+      <p>Drops sell out fast. Join the list and you will know before it hits the shop page.</p>
+      <form class="newsletter-form" onsubmit="subscribeNewsletter(event)">
+        <input type="email" id="nlEmail" placeholder="Enter your email" required>
+        <button type="submit" class="btn btn-primary">Join List</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-inner">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">From The Customers</span>
+          <h2>What They're Saying</h2>
+        </div>
+      </div>
+      <div class="section-divider"></div>
+      <div class="testimonials-grid">
+        <div class="testi-card">
+          <div class="testi-mark">"</div>
+          <p class="testi-text">Copped the Lagos Strap and the comfort is unreal. Wore it for a full day at the market, no blisters, nothing. Already eyeing the next colourway.</p>
+          <div class="testi-author"><div class="testi-avatar">CO</div><div><p class="testi-name">Chidi O.</p><p class="testi-loc">Lagos</p></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-mark">"</div>
+          <p class="testi-text">Delivery was fast and the packaging alone told me this brand takes itself seriously. The build quality matches the price, maybe even beats it.</p>
+          <div class="testi-author"><div class="testi-avatar">DM</div><div><p class="testi-name">David M.</p><p class="testi-loc">Abuja</p></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-mark">"</div>
+          <p class="testi-text">I have bought three pairs now. SlideWrld understood the brief, comfortable, looks expensive, does not fall apart after a month like the others.</p>
+          <div class="testi-author"><div class="testi-avatar">TE</div><div><p class="testi-name">Tunde E.</p><p class="testi-loc">Port Harcourt</p></div></div>
+        </div>
+        <div class="testi-card">
+          <div class="testi-mark">"</div>
+          <p class="testi-text">Ordered the Vault Limited the same week it dropped and I am glad I moved fast, my guy tried to get the same pair two days later and it was gone.</p>
+          <div class="testi-author"><div class="testi-avatar">BA</div><div><p class="testi-name">Bayo A.</p><p class="testi-loc">Ibadan</p></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== SHOP PAGE ===== -->
+<div class="page" id="page-shop">
+  <section class="section" style="padding-top:130px;">
+    <div class="section-inner">
+      <div class="section-header">
+        <div>
+          <span class="eyebrow">The Catalogue</span>
+          <h2>Shop All Slides</h2>
+        </div>
+        <p>Filter by style. New pieces get added without warning.</p>
+      </div>
+      <div class="section-divider"></div>
+      <div style="display:flex;gap:0.7rem;flex-wrap:wrap;margin-bottom:2.6rem;">
+        <button class="cat-pill" onclick="filterCat('all')">All</button>
+        <button class="cat-pill" onclick="filterCat('classic')">Classic</button>
+        <button class="cat-pill" onclick="filterCat('strapped')">Strapped</button>
+        <button class="cat-pill" onclick="filterCat('woven')">Woven</button>
+        <button class="cat-pill" onclick="filterCat('limited')">Limited Run</button>
+      </div>
+      <div class="products-grid" id="shopProductGrid"></div>
+    </div>
+  </section>
+</div>
+
+<!-- ===== CHECKOUT PAGE ===== -->
+<div class="page" id="page-checkout">
+  <div class="checkout-wrap">
+    <div>
+      <div class="checkout-form-section">
+        <h2>Your Details</h2>
+        <form onsubmit="placeOrder(event)">
+          <div class="form-row">
+            <div class="form-group"><label>First Name</label><input type="text" id="oFirst" required></div>
+            <div class="form-group"><label>Last Name</label><input type="text" id="oLast" required></div>
+          </div>
+          <div class="form-group"><label>Email Address</label><input type="email" id="oEmail" required></div>
+          <div class="form-group"><label>Phone Number</label><input type="tel" id="oPhone" required></div>
+          <div class="form-group"><label>Delivery Address</label><textarea id="oAddress" rows="3" required></textarea></div>
+          <div class="form-group"><label>State / City</label><input type="text" id="oCity" required></div>
+
+          <div class="bank-details-box" id="bankDetailsBox">
+            <h4>Payment Instructions</h4>
+            <p style="font-size:0.82rem;color:var(--bone-dim);margin-bottom:0.9rem;">Transfer the exact amount below to the account shown, then upload your proof of payment.</p>
+            <div class="bank-row"><span>Bank Name</span><strong id="dispBank">Not configured</strong></div>
+            <div class="bank-row"><span>Account Name</span><strong id="dispAccName">Not configured</strong></div>
+            <div class="bank-row"><span>Account Number</span><strong id="dispAccNum">Not configured</strong></div>
+            <div class="bank-row"><span>Amount to Pay</span><strong id="dispAmount">0</strong></div>
+          </div>
+
+          <div class="form-group">
+            <label>Upload Payment Proof</label>
+            <div class="upload-proof" onclick="document.getElementById('proofFile').click()">
+              <p>Click to upload from your device — JPG, PNG or PDF</p>
+              <img id="proofPreviewImg" class="proof-preview">
+            </div>
+            <input type="file" id="proofFile" accept="image/*,.pdf" style="display:none" onchange="previewProof(this)">
+          </div>
+
+          <a href="https://wa.me/2348164276235?text=Hi%2C%20I%20just%20placed%20an%20order%20on%20SlideWrld%20and%20need%20to%20confirm%20my%20payment." target="_blank" class="whatsapp-confirm">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            Payment delayed? Confirm via WhatsApp
+          </a>
+
+          <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;margin-top:1.6rem;padding:1rem;">Place Order</button>
+        </form>
+      </div>
+    </div>
+    <div>
+      <div class="order-summary">
+        <h3>Order Summary</h3>
+        <div id="summaryItemsEl"></div>
+        <div class="summary-total"><span>Total</span><span id="summaryTotalEl">0</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ORDER SUCCESS ===== -->
+<div class="page" id="page-success">
+  <div class="success-wrap">
+    <div class="success-icon-mark">
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+    </div>
+    <h2>Order Placed</h2>
+    <p>Thanks, <strong id="successNameEl">there</strong>. Your order is in and a confirmation has been sent to your email.<br><br>Once your payment proof is verified, your slides go straight into dispatch. Need a faster confirmation? Use the button below.</p>
+    <br>
+    <a href="https://wa.me/2348164276235?text=Hi%2C%20I%20just%20placed%20an%20order%20on%20SlideWrld%20and%20would%20like%20to%20confirm%20my%20payment." target="_blank" class="whatsapp-confirm" style="justify-content:center;margin-bottom:1.6rem;">
+      <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+      Confirm Payment via WhatsApp
+    </a>
+    <button class="btn btn-outline" onclick="showPage('home')">Back to Home</button>
+  </div>
+</div>
+
+<!-- ===== ADMIN LOGIN ===== -->
+<div class="page" id="page-admin-login">
+  <div class="auth-wrap">
+    <div class="auth-card">
+      <div class="brand">Slide<span>Wrld</span></div>
+      <h2>Admin Access</h2>
+      <p class="sub">Restricted area. Authorised personnel only.</p>
+      <div class="auth-error" id="loginError"></div>
+      <div class="form-group">
+        <label>Admin Password</label>
+        <input type="password" id="loginPwd" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.4rem;" onclick="doLogin()">Enter Panel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ADMIN PANEL ===== -->
+<div class="page" id="page-admin">
+  <div class="admin-wrap">
+    <button class="admin-hamburger" id="adminHamburger" onclick="toggleAdminMenu()" aria-label="Toggle admin menu">
+      <span></span><span></span><span></span>
+    </button>
+
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="admin-logo">
+        <p>Slide<span>Wrld</span></p>
+        <small>Admin Panel</small>
+      </div>
+      <button class="admin-nav-link active" onclick="adminTab('dashboard',this)"><span class="nav-icon">DB</span> Dashboard</button>
+      <button class="admin-nav-link" onclick="adminTab('orders',this)"><span class="nav-icon">OR</span> Orders</button>
+      <button class="admin-nav-link" onclick="adminTab('products',this)"><span class="nav-icon">PR</span> Products</button>
+      <button class="admin-nav-link" onclick="adminTab('newsletter',this)"><span class="nav-icon">NL</span> Newsletter</button>
+      <button class="admin-nav-link" onclick="adminTab('settings',this)"><span class="nav-icon">ST</span> Settings</button>
+      <div class="admin-logout-btn">
+        <button class="admin-nav-link" onclick="adminLogout()"><span class="nav-icon">X</span> Log Out</button>
+      </div>
+    </aside>
+
+    <main class="admin-main" id="adminMain">
+      <div class="admin-topbar">
+        <h1 id="adminTitle">Dashboard</h1>
+        <span class="tag">SlideWrld Admin</span>
+      </div>
+
+      <!-- DASHBOARD -->
+      <div class="admin-section active" id="admin-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-label">Total Orders</div><div class="stat-value" id="statOrders">0</div><div class="stat-sub">All time</div></div>
+          <div class="stat-card"><div class="stat-label">Revenue</div><div class="stat-value" id="statRevenue">0</div><div class="stat-sub">Confirmed orders</div></div>
+          <div class="stat-card"><div class="stat-label">Products</div><div class="stat-value" id="statProducts">0</div><div class="stat-sub">In catalogue</div></div>
+          <div class="stat-card"><div class="stat-label">Subscribers</div><div class="stat-value" id="statSubs">0</div><div class="stat-sub">Newsletter list</div></div>
+        </div>
+        <div class="admin-card">
+          <h3>Recent Orders</h3>
+          <table class="admin-table">
+            <thead><tr><th>Customer</th><th>Items</th><th>Amount</th><th>Status</th><th>Date</th></tr></thead>
+            <tbody id="dashOrdersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ORDERS -->
+      <div class="admin-section" id="admin-orders">
+        <div class="admin-card">
+          <h3>All Orders</h3>
+          <table class="admin-table">
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Email</th><th>Items</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody id="ordersBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- PRODUCTS -->
+      <div class="admin-section" id="admin-products">
+        <div class="admin-card">
+          <h3>Add New Product</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;">
+            <div class="form-group"><label>Product Name</label><input type="text" id="newPName" style="width:100%;"></div>
+            <div class="form-group"><label>Category</label>
+              <select id="newPCat" style="width:100%;">
+                <option value="classic">Classic</option>
+                <option value="strapped">Strapped</option>
+                <option value="woven">Woven</option>
+                <option value="limited">Limited Run</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Price (NGN)</label><input type="number" id="newPPrice" style="width:100%;"></div>
+            <div class="form-group"><label>Original / Slash Price (NGN) — optional</label><input type="number" id="newPOldPrice" style="width:100%;"></div>
+            <div class="form-group" style="grid-column:1/-1;"><label>Description</label><textarea id="newPDesc" rows="2" style="width:100%;"></textarea></div>
+            <div class="form-group" style="grid-column:1/-1;">
+              <label>Product Image — upload from your device</label>
+              <div class="upload-area" onclick="document.getElementById('newPImg').click()">
+                <p><strong>Click to upload image</strong> — JPG, PNG, WEBP</p>
+                <img id="newPImgPreview" class="upload-preview-img">
+              </div>
+              <input type="file" id="newPImg" accept="image/*" style="display:none" onchange="previewNewProdImg(this)">
+            </div>
+          </div>
+          <button class="btn btn-primary" style="margin-top:1.1rem;" onclick="addProduct()">Add Product</button>
+        </div>
+        <div class="admin-card">
+          <h3>Manage Products</h3>
+          <table class="admin-table">
+            <thead><tr><th>Image</th><th>Name</th><th>Category</th><th>Price</th><th>Actions</th></tr></thead>
+            <tbody id="productsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- NEWSLETTER -->
+      <div class="admin-section" id="admin-newsletter">
+        <div class="admin-card">
+          <h3>Send Drop Alert</h3>
+          <div class="form-group"><label>Subject Line</label><input type="text" id="nlSubject" placeholder="e.g. New Drop Just Landed" style="width:100%;"></div>
+          <div class="form-group"><label>Message</label><textarea id="nlBody" rows="6" placeholder="Write your message here..." style="width:100%;"></textarea></div>
+          <p style="font-size:0.83rem;color:var(--bone-dim);margin-bottom:1.1rem;">This will be sent to all <strong id="nlSubCountEl">0</strong> subscribers.</p>
+          <button class="btn btn-primary" onclick="sendNewsletter()">Send Newsletter</button>
+        </div>
+        <div class="admin-card">
+          <h3>Subscriber List</h3>
+          <table class="admin-table">
+            <thead><tr><th>#</th><th>Email</th><th>Date Subscribed</th><th>Action</th></tr></thead>
+            <tbody id="subsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SETTINGS -->
+      <div class="admin-section" id="admin-settings">
+        <div class="admin-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.3rem;">
+            <h3 style="margin-bottom:0;">Bank Account Details</h3>
+            <button class="action-btn action-delete" onclick="clearBankDetails()" id="clearBankBtn" style="display:none;">Remove</button>
+          </div>
+          <div id="bankSetForm">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;">
+              <div class="form-group"><label>Bank Name</label><input type="text" id="setBankName" placeholder="e.g. GTBank" style="width:100%;"></div>
+              <div class="form-group"><label>Account Name</label><input type="text" id="setAccName" placeholder="e.g. SlideWrld Store" style="width:100%;"></div>
+              <div class="form-group"><label>Account Number</label><input type="text" id="setAccNum" placeholder="0123456789" style="width:100%;"></div>
+            </div>
+            <button class="btn btn-primary" onclick="saveBankDetails()">Save Bank Details</button>
+          </div>
+          <div id="bankSetDisplay" style="display:none;">
+            <div class="settings-row"><span class="settings-key">Bank Name</span><span class="settings-val" id="dspBankName">—</span></div>
+            <div class="settings-row"><span class="settings-key">Account Name</span><span class="settings-val" id="dspAccName">—</span></div>
+            <div class="settings-row"><span class="settings-key">Account Number</span><span class="settings-val" id="dspAccNum">—</span></div>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.3rem;">
+            <h3 style="margin-bottom:0;">Order Notification Email</h3>
+            <button class="action-btn action-delete" onclick="clearNotifEmail()" id="clearEmailBtn" style="display:none;">Remove</button>
+          </div>
+          <p style="font-size:0.85rem;color:var(--bone-dim);margin-bottom:1.1rem;">Every new order and every customer who places one will be logged with this address attached.</p>
+          <div id="emailSetForm">
+            <div class="form-group"><label>Email Address</label><input type="email" id="setAdminEmail" placeholder="you@email.com" style="width:100%;"></div>
+            <button class="btn btn-primary" onclick="saveAdminEmail()">Save Email</button>
+          </div>
+          <div id="emailSetDisplay" style="display:none;">
+            <div class="settings-row"><span class="settings-key">Notification Email</span><span class="settings-val" id="dspAdminEmail">—</span></div>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <h3>Change Admin Password</h3>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;">
+            <div class="form-group"><label>Current Password</label><input type="password" id="curPwd" style="width:100%;"></div>
+            <div style="grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:1.3rem;">
+              <div class="form-group"><label>New Password</label><input type="password" id="changePwd1" style="width:100%;"></div>
+              <div class="form-group"><label>Confirm New Password</label><input type="password" id="changePwd2" style="width:100%;"></div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="changeAdminPassword()">Update Password</button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<!-- PRODUCT DETAIL MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('productModal')">X</button>
+    <img id="modalImg" src="" alt="Product" class="modal-prod-img">
+    <h3 id="modalName"></h3>
+    <div class="product-detail-price" id="modalPrice"></div>
+    <p id="modalDesc" style="color:var(--bone-dim);font-size:0.92rem;line-height:1.7;margin-bottom:1.1rem;"></p>
+    <div class="qty-wrap">
+      <button class="qty-btn" onclick="changeQty(-1)">-</button>
+      <span class="qty-display" id="modalQtyEl">1</span>
+      <button class="qty-btn" onclick="changeQty(1)">+</button>
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="addModalToCart()">Add to Bag</button>
+  </div>
+</div>
+
+<!-- EDIT PRODUCT MODAL -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('editModal')">X</button>
+    <h3 style="margin-bottom:1.6rem;">Edit Product</h3>
+    <input type="hidden" id="editProdIdx">
+    <div class="form-group"><label>Product Name</label><input type="text" id="editName" style="width:100%;"></div>
+    <div class="form-group"><label>Price (NGN)</label><input type="number" id="editPrice" style="width:100%;"></div>
+    <div class="form-group"><label>Original Price (NGN)</label><input type="number" id="editOldPrice" style="width:100%;"></div>
+    <div class="form-group"><label>Description</label><textarea id="editDesc" rows="3" style="width:100%;"></textarea></div>
+    <div class="form-group">
+      <label>Replace Image — optional</label>
+      <div class="upload-area" onclick="document.getElementById('editProdImg').click()">
+        <p><strong>Upload new image</strong> from device</p>
+        <img id="editImgPreview" class="upload-preview-img">
+      </div>
+      <input type="file" id="editProdImg" accept="image/*" style="display:none" onchange="previewEditImg(this)">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:0.5rem;" onclick="saveEditProduct()">Save Changes</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- WHATSAPP FLOAT -->
+<a href="https://wa.me/2348164276235?text=Hi%20SlideWrld%2C%20I%20need%20help%20with%20my%20order!" target="_blank" class="wa-float" id="waFloat">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+  Chat with us
+</a>
+
+<!-- FOOTER -->
+<footer id="mainFooter">
+  <div class="footer-inner">
+    <div>
+      <div class="footer-logo">Slide<span>Wrld</span></div>
+      <p>Premium slides for men who do not slow down. Designed in Nigeria, built to outlast the season.</p>
+      <div class="footer-social">
+        <a href="https://www.tiktok.com/@slide_wrld" target="_blank" class="social-icon" title="TikTok">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.34 6.34 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.16 8.16 0 004.78 1.54V6.78a4.85 4.85 0 01-1.01-.09z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/slide_wrld" target="_blank" class="social-icon" title="Instagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+        </a>
+      </div>
+    </div>
+    <div>
+      <h4>Shop</h4>
+      <a onclick="filterCat('classic');showPage('shop')">Classic</a>
+      <a onclick="filterCat('strapped');showPage('shop')">Strapped</a>
+      <a onclick="filterCat('woven');showPage('shop')">Woven</a>
+      <a onclick="filterCat('limited');showPage('shop')">Limited Run</a>
+    </div>
+    <div>
+      <h4>Help</h4>
+      <a href="#">Delivery Info</a>
+      <a href="#">Returns Policy</a>
+      <a href="#">Size Guide</a>
+      <a href="https://wa.me/2348164276235" target="_blank">WhatsApp Us</a>
+    </div>
+    <div>
+      <h4>Follow Us</h4>
+      <a href="https://www.tiktok.com/@slide_wrld" target="_blank">TikTok @slide_wrld</a>
+      <a href="https://www.instagram.com/slide_wrld" target="_blank">Instagram @slide_wrld</a>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>2026 SlideWrld. All rights reserved.</p>
+    <p style="margin-top:0.6rem;"><a onclick="showPage('admin-login')" style="color:var(--stone);font-size:0.78rem;cursor:pointer;text-decoration:underline;">Admin Login</a></p>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
