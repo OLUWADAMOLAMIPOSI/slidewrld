@@ -1,0 +1,21 @@
+{
+  "name": "slidewrld",
+  "version": "1.0.0",
+  "description": "",
+  "main": "script.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/OLUWADAMOLAMIPOSI/slidewrld.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/OLUWADAMOLAMIPOSI/slidewrld/issues"
+  },
+  "homepage": "https://github.com/OLUWADAMOLAMIPOSI/slidewrld#readme"
+}

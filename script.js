@@ -6,7 +6,7 @@ const ADMIN_PASSWORD_DEFAULT = 'PeaceA29';
 // ============================================================
 // NETLIFY API CONFIGURATION
 // ============================================================
-const API_URL = '/.netlify/functions/api';
+const API_URL = '/api';
 
 let masterData = {
     products: [],
@@ -14,6 +14,18 @@ let masterData = {
     subscribers: [],
     settings: {}
 };
+
+// ============================================================
+// EMAILJS CONFIGURATION - Free email sending
+// ============================================================
+// Sign up at https://www.emailjs.com/ (free)
+// Create a service, template, and get your keys
+const EMAILJS_CONFIG = {
+    serviceID: '',   // From EmailJS dashboard
+    templateID: 'YOUR_EMAILJS_TEMPLATE_ID', // From EmailJS dashboard
+    publicKey: 'YOUR_EMAILJS_PUBLIC_KEY'    // From EmailJS dashboard
+};
+
 
 // ============================================================
 // HAMBURGER MENU TOGGLE (Main Nav)
@@ -175,6 +187,114 @@ async function testAPI() {
         console.error('API test failed:', e.message);
         showToast('Cannot connect to API. Check your internet connection.', 'error');
     }
+}
+
+// ============================================================
+// EMAIL SENDING FUNCTIONS (Using EmailJS)
+// ============================================================
+async function sendAdminNotification(order) {
+    try {
+        // Check if EmailJS is configured
+        if (EMAILJS_CONFIG.serviceID === 'YOUR_EMAILJS_SERVICE_ID') {
+            console.log('EmailJS not configured. Please set up EmailJS.');
+            console.log('Order notification would be sent to admin:', order);
+            return false;
+        }
+
+        // Load EmailJS SDK if not loaded
+        if (typeof emailjs === 'undefined') {
+            await loadEmailJS();
+        }
+
+        const s = getSettings();
+        const adminEmail = s.adminEmail || 'admin@slidewrld.com';
+        const total = order.items.reduce((sum, item) => sum + (item.price * item.qty), 0);
+
+        // Send to admin
+        const adminParams = {
+            to_email: adminEmail,
+            to_name: 'SlideWrld Admin',
+            customer_name: order.name,
+            customer_email: order.email,
+            customer_phone: order.phone,
+            order_id: order.id,
+            order_items: order.items.map(i => `${i.name} x${i.qty} - ₦${(i.price * i.qty).toLocaleString()}`).join('\n'),
+            order_total: '₦' + total.toLocaleString(),
+            order_date: order.date,
+            payment_proof: order.hasProof ? 'Uploaded' : 'Not uploaded',
+            status: order.status,
+            message: `New order from ${order.name}. Please check the order and confirm payment.`
+        };
+
+        await emailjs.send(
+            EMAILJS_CONFIG.serviceID,
+            EMAILJS_CONFIG.templateID,
+            adminParams,
+            EMAILJS_CONFIG.publicKey
+        );
+
+        console.log('Admin notification sent successfully');
+        return true;
+    } catch (e) {
+        console.error('Failed to send admin email:', e);
+        return false;
+    }
+}
+
+async function sendCustomerNotification(order, status) {
+    try {
+        if (EMAILJS_CONFIG.serviceID === 'YOUR_EMAILJS_SERVICE_ID') {
+            console.log('EmailJS not configured. Customer notification would be sent.');
+            return false;
+        }
+
+        if (typeof emailjs === 'undefined') {
+            await loadEmailJS();
+        }
+
+        const statusMessages = {
+            pending: 'Your order is pending payment confirmation.',
+            confirmed: 'Your payment has been confirmed! Your order is being processed.',
+            shipped: 'Your order has been shipped! Track your package soon.'
+        };
+
+        const params = {
+            to_email: order.email,
+            to_name: order.name.split(' ')[0] || 'Customer',
+            order_id: order.id,
+            order_status: status,
+            status_message: statusMessages[status] || 'Your order status has been updated.',
+            order_items: order.items.map(i => `${i.name} x${i.qty}`).join(', '),
+            order_total: '₦' + order.items.reduce((sum, i) => sum + (i.price * i.qty), 0).toLocaleString(),
+            message: `Your order ${order.id} status is now: ${status.toUpperCase()}.`
+        };
+
+        await emailjs.send(
+            EMAILJS_CONFIG.serviceID,
+            EMAILJS_CONFIG.templateID,
+            params,
+            EMAILJS_CONFIG.publicKey
+        );
+
+        console.log('Customer notification sent successfully');
+        return true;
+    } catch (e) {
+        console.error('Failed to send customer email:', e);
+        return false;
+    }
+}
+
+function loadEmailJS() {
+    return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+        script.onload = () => {
+            emailjs.init(EMAILJS_CONFIG.publicKey);
+            resolve();
+        };
+        script.onerror = reject;
+        document.head.appendChild(script);
+    });
 }
 
 // ============================================================
@@ -424,7 +544,7 @@ function previewProof(inp) {
 }
 
 // ============================================================
-// PLACE ORDER (UPDATED)
+// PLACE ORDER (UPDATED - Sends emails)
 // ============================================================
 async function placeOrder(e) {
   e.preventDefault();
@@ -435,6 +555,11 @@ async function placeOrder(e) {
   const addr  = document.getElementById('oAddress').value + ', ' + document.getElementById('oCity').value;
   const cart  = getCart();
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+
+  if (!cart.length) {
+    showToast('Your cart is empty.', 'error');
+    return;
+  }
 
   const order = {
     id: 'SW' + Date.now(),
@@ -449,21 +574,69 @@ async function placeOrder(e) {
     date: new Date().toLocaleDateString()
   };
 
+  // Save order to server
   const orders = getOrders();
   orders.unshift(order);
   await setOrders(orders);
 
-  const s = getSettings();
-  if (s.adminEmail) {
-    console.log(`[ORDER NOTIFICATION] To: ${s.adminEmail}\nNew order from ${order.name} (${order.email})\nTotal: ${fmtPrice(order.total)}\nItems: ${order.items.map(i => i.name + ' x' + i.qty).join(', ')}\nPayment proof attached: ${order.hasProof ? 'Yes' : 'No'}`);
-  }
-  console.log(`[CUSTOMER RECEIPT EMAIL] To: ${order.email}\nSubject: We received your order — ${order.id}\nHi ${first}, thanks for shopping SlideWrld. Your order total is ${fmtPrice(order.total)}. Once your payment is verified you will get a dispatch update.`);
+  // Send notification to admin (if EmailJS is configured)
+  const adminNotified = await sendAdminNotification(order);
 
+  // Send confirmation to customer (if EmailJS is configured)
+  await sendCustomerNotification(order, 'pending');
+
+  // Clear cart and show success
   document.getElementById('successNameEl').textContent = first;
   proofData = null;
   setCart([]);
   updateCartCount();
   showPage('success');
+
+  if (adminNotified) {
+    showToast('Order placed! Admin has been notified.', 'success');
+  } else {
+    showToast('Order placed! Admin will review your order.', 'success');
+  }
+}
+
+// ============================================================
+// CONFIRM PAYMENT (Admin action)
+// ============================================================
+async function confirmPayment(orderIndex) {
+  if (!confirm('Confirm payment for this order? The customer will be notified.')) return;
+
+  const orders = getOrders();
+  if (!orders[orderIndex]) return;
+
+  orders[orderIndex].status = 'confirmed';
+  await setOrders(orders);
+
+  // Send confirmation email to customer
+  await sendCustomerNotification(orders[orderIndex], 'confirmed');
+
+  renderOrdersTable();
+  renderAdminDashboard();
+  showToast('Payment confirmed! Customer notified.', 'success');
+}
+
+// ============================================================
+// MARK AS SHIPPED (Admin action)
+// ============================================================
+async function markAsShipped(orderIndex) {
+  if (!confirm('Mark this order as shipped? The customer will be notified.')) return;
+
+  const orders = getOrders();
+  if (!orders[orderIndex]) return;
+
+  orders[orderIndex].status = 'shipped';
+  await setOrders(orders);
+
+  // Send shipping notification to customer
+  await sendCustomerNotification(orders[orderIndex], 'shipped');
+
+  renderOrdersTable();
+  renderAdminDashboard();
+  showToast('Order marked as shipped! Customer notified.', 'success');
 }
 
 // ============================================================
@@ -534,13 +707,13 @@ function renderAdminDashboard() {
 }
 
 // ============================================================
-// ADMIN — ORDERS
+// ADMIN — ORDERS (UPDATED with Confirm & Ship buttons)
 // ============================================================
 function renderOrdersTable() {
   const orders = getOrders();
   const tbody = document.getElementById('ordersBody');
   if (!orders.length) {
-    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--stone);padding:2rem;">No orders yet.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--stone);padding:2rem;">No orders yet.</td></tr>';
     return;
   }
   tbody.innerHTML = orders.map((o, i) => `<tr>
@@ -550,24 +723,28 @@ function renderOrdersTable() {
     <td style="max-width:180px;font-size:0.8rem;">${o.items.map(x => x.name).join(', ')}</td>
     <td>${fmtPrice(o.total)}</td>
     <td>
-      <select style="font-size:0.8rem;padding:5px 7px;border:1px solid var(--line);background:var(--black);color:var(--bone);" onchange="updateOrderStatus(${i}, this.value)">
-        <option value="pending"   ${o.status === 'pending'   ? 'selected' : ''}>Pending</option>
-        <option value="confirmed" ${o.status === 'confirmed' ? 'selected' : ''}>Confirmed</option>
-        <option value="shipped"   ${o.status === 'shipped'   ? 'selected' : ''}>Shipped</option>
-      </select>
+      <span class="status-badge status-${o.status}">${o.status}</span>
+    </td>
+    <td>
+      ${o.status === 'pending' ? `<button class="action-btn action-edit" onclick="confirmPayment(${i})">Confirm Payment</button>` : ''}
+      ${o.status === 'confirmed' ? `<button class="action-btn action-edit" onclick="markAsShipped(${i})">Mark Shipped</button>` : ''}
     </td>
     <td><button class="action-btn action-delete" onclick="deleteOrder(${i})">Delete</button></td>
   </tr>`).join('');
 }
 
 // ============================================================
-// UPDATE ORDER STATUS (UPDATED)
+// UPDATE ORDER STATUS (UPDATED - sends emails)
 // ============================================================
 async function updateOrderStatus(idx, val) {
   const orders = getOrders();
   orders[idx].status = val;
   await setOrders(orders);
-  showToast('Order status updated.', 'success');
+
+  // Send notification to customer
+  await sendCustomerNotification(orders[idx], val);
+
+  showToast('Order status updated. Customer notified.', 'success');
   renderAdminDashboard();
 }
 
@@ -907,6 +1084,7 @@ async function init() {
     renderHomeProducts();
     console.log('SlideWrld initialized with server sync');
     console.log('Run testAPI() in console to test connection');
+    console.log('To enable emails, configure EmailJS in the script');
 }
 
 init();
