@@ -4,7 +4,10 @@
 const ADMIN_PASSWORD_DEFAULT = 'PeaceA29';
 
 // ============================================================
-// NETLIFY API CONFIGURATION
+// API CONFIGURATION
+// Calls /api, which is served by api/index.js on Vercel.
+// No platform-specific path needed — Vercel routes any file in
+// the api/ folder automatically.
 // ============================================================
 const API_URL = '/api';
 
