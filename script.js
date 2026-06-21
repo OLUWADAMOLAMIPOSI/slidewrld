@@ -84,7 +84,7 @@ document.querySelectorAll('.admin-nav-link').forEach(link => {
 });
 
 // ============================================================
-// STATE — all persisted in localStorage
+// STATE — localStorage is only an offline fallback, never the source of truth
 // ============================================================
 function load(key, fallback) {
   try {
@@ -100,8 +100,14 @@ function save(key, val) {
 
 // ============================================================
 // LOAD DATA FROM SERVER
+// Every call replaces masterData with whatever is currently on
+// the server. This is what keeps every open browser in sync.
 // ============================================================
+let isLoadingFromServer = false;
+
 async function loadFromServer() {
+    if (isLoadingFromServer) return true;
+    isLoadingFromServer = true;
     try {
         const res = await fetch(API_URL + '?action=get', { cache: 'no-store' });
         if (!res.ok) {
@@ -130,6 +136,8 @@ async function loadFromServer() {
         masterData.subscribers = load('sw_subs', []);
         masterData.settings = load('sw_settings', {});
         return false;
+    } finally {
+        isLoadingFromServer = false;
     }
 }
 
@@ -140,7 +148,7 @@ async function saveToServer() {
     try {
         const res = await fetch(API_URL + '?action=save', {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(masterData)
@@ -153,20 +161,33 @@ async function saveToServer() {
             throw new Error(result.error);
         }
         console.log('Data saved to server successfully');
-        return true;
-    } catch (e) {
-        console.error('Error saving to server:', e.message);
-        console.log('Saved to localStorage only (will not sync to other devices)');
         try {
             save('sw_products', masterData.products);
             save('sw_orders', masterData.orders);
             save('sw_subs', masterData.subscribers);
             save('sw_settings', masterData.settings);
-        } catch (e2) {
-            console.error('Could not save to localStorage:', e2.message);
+        } catch (e) {
+            console.log('Could not save to localStorage');
         }
+        return true;
+    } catch (e) {
+        console.error('Error saving to server:', e.message);
+        showToast('Could not save to server. Changes may not sync to other devices.', 'error');
         return false;
     }
+}
+
+// ============================================================
+// REFRESH-THEN-SAVE
+// This is the fix for the overwrite bug: before writing any
+// change, pull the latest server copy, apply the change on top
+// of it, then save. This stops one open tab from wiping out a
+// change made from another tab or device.
+// ============================================================
+async function refreshThenSave(mutateFn) {
+    await loadFromServer();
+    mutateFn(masterData);
+    return await saveToServer();
 }
 
 // ============================================================
@@ -307,17 +328,8 @@ function placeholderImg(label) {
   return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg);
 }
 
-const DEFAULT_PRODUCTS = [
-  { id: 1, name: 'Ona Classic', cat: 'classic', price: 14500, oldPrice: 18000, desc: 'The everyday slide. Molded EVA sole, clean lines, built for daily wear without losing shape.', img: placeholderImg('ONA CLASSIC'), badge: 'Bestseller' },
-  { id: 2, name: 'Lagos Strap', cat: 'strapped', price: 19500, oldPrice: 24000, desc: 'Hand-stitched woven strap over a reinforced base. The one people stop you to ask about.', img: placeholderImg('LAGOS STRAP'), badge: 'New' },
-  { id: 3, name: 'Eko Weave', cat: 'woven', price: 21000, oldPrice: null, desc: 'Fully woven upper with a soft cushioned base. Texture-forward, built for warm weather.', img: placeholderImg('EKO WEAVE'), badge: null },
-  { id: 4, name: 'Iron Strap Pro', cat: 'strapped', price: 23500, oldPrice: 27000, desc: 'Heavier build for men who need a slide that can take pressure without breaking down.', img: placeholderImg('IRON STRAP PRO'), badge: 'Sale' },
-  { id: 5, name: 'Vault Limited', cat: 'limited', price: 32000, oldPrice: 38000, desc: 'Restricted batch run, only a small number made. Once sold out, this colourway is retired.', img: placeholderImg('VAULT LIMITED'), badge: 'Limited' },
-  { id: 6, name: 'Bare Classic II', cat: 'classic', price: 15500, oldPrice: null, desc: 'Stripped back design, two strap bands, minimal branding. Built for the man who keeps it simple.', img: placeholderImg('BARE CLASSIC II'), badge: 'New' },
-];
-
 // ============================================================
-// REPLACED GET/SET FUNCTIONS (Now using masterData)
+// GETTERS — always read whatever is currently in masterData
 // ============================================================
 function getProducts()    { return masterData.products || []; }
 function getOrders()      { return masterData.orders || []; }
@@ -325,11 +337,7 @@ function getSubscribers() { return masterData.subscribers || []; }
 function getSettings()    { return masterData.settings || {}; }
 function getCart()        { return load('sw_cart', []); }
 
-async function setProducts(v)    { masterData.products = v; await saveToServer(); }
-async function setOrders(v)      { masterData.orders = v; await saveToServer(); }
-async function setSubscribers(v) { masterData.subscribers = v; await saveToServer(); }
-async function setSettings(v)    { masterData.settings = v; await saveToServer(); }
-function setCart(v)              { save('sw_cart', v); }
+function setCart(v) { save('sw_cart', v); }
 
 let modalProd = null;
 let modalQtyVal = 1;
@@ -339,7 +347,7 @@ let currentFilter = 'all';
 // ============================================================
 // PAGE ROUTING
 // ============================================================
-function showPage(p) {
+async function showPage(p) {
   document.querySelectorAll('.page').forEach(el => el.classList.remove('active'));
   const pg = document.getElementById('page-' + p);
   if (pg) pg.classList.add('active');
@@ -349,6 +357,13 @@ function showPage(p) {
   document.getElementById('mainFooter').style.display  = isAdmin ? 'none' : '';
   document.getElementById('waFloat').style.display     = isAdmin ? 'none' : '';
   window.scrollTo(0, 0);
+
+  // Pull the latest data whenever the customer lands on a page
+  // that displays products, so a new product added on another
+  // device shows up without needing a hard refresh.
+  if (p === 'home' || p === 'shop') {
+    await loadFromServer();
+  }
 
   if (p === 'home')     renderHomeProducts();
   if (p === 'shop')     renderShopProducts();
@@ -449,7 +464,7 @@ function closeModal(id) {
 }
 
 // ============================================================
-// CART
+// CART (always local, per-device by design, not synced)
 // ============================================================
 function addToCart(p, qty) {
   const cart = getCart();
@@ -540,7 +555,7 @@ function previewProof(inp) {
 }
 
 // ============================================================
-// PLACE ORDER (UPDATED - Sends emails)
+// PLACE ORDER
 // ============================================================
 async function placeOrder(e) {
   e.preventDefault();
@@ -570,10 +585,14 @@ async function placeOrder(e) {
     date: new Date().toLocaleDateString()
   };
 
-  // Save order to server
-  const orders = getOrders();
-  orders.unshift(order);
-  await setOrders(orders);
+  const ok = await refreshThenSave((data) => {
+    data.orders.unshift(order);
+  });
+
+  if (!ok) {
+    showToast('Could not place order. Check your connection and try again.', 'error');
+    return;
+  }
 
   // Send notification to admin (if EmailJS is configured)
   const adminNotified = await sendAdminNotification(order);
@@ -601,14 +620,28 @@ async function placeOrder(e) {
 async function confirmPayment(orderIndex) {
   if (!confirm('Confirm payment for this order? The customer will be notified.')) return;
 
+  await loadFromServer();
   const orders = getOrders();
-  if (!orders[orderIndex]) return;
+  if (!orders[orderIndex]) {
+    showToast('That order could not be found. The list may have changed.', 'error');
+    renderOrdersTable();
+    return;
+  }
 
-  orders[orderIndex].status = 'confirmed';
-  await setOrders(orders);
+  const targetOrder = orders[orderIndex];
 
-  // Send confirmation email to customer
-  await sendCustomerNotification(orders[orderIndex], 'confirmed');
+  const ok = await refreshThenSave((data) => {
+    const o = data.orders.find(x => x.id === targetOrder.id);
+    if (o) o.status = 'confirmed';
+  });
+
+  if (!ok) {
+    showToast('Could not update order. Try again.', 'error');
+    return;
+  }
+
+  const updated = getOrders().find(x => x.id === targetOrder.id);
+  if (updated) await sendCustomerNotification(updated, 'confirmed');
 
   renderOrdersTable();
   renderAdminDashboard();
@@ -621,14 +654,28 @@ async function confirmPayment(orderIndex) {
 async function markAsShipped(orderIndex) {
   if (!confirm('Mark this order as shipped? The customer will be notified.')) return;
 
+  await loadFromServer();
   const orders = getOrders();
-  if (!orders[orderIndex]) return;
+  if (!orders[orderIndex]) {
+    showToast('That order could not be found. The list may have changed.', 'error');
+    renderOrdersTable();
+    return;
+  }
 
-  orders[orderIndex].status = 'shipped';
-  await setOrders(orders);
+  const targetOrder = orders[orderIndex];
 
-  // Send shipping notification to customer
-  await sendCustomerNotification(orders[orderIndex], 'shipped');
+  const ok = await refreshThenSave((data) => {
+    const o = data.orders.find(x => x.id === targetOrder.id);
+    if (o) o.status = 'shipped';
+  });
+
+  if (!ok) {
+    showToast('Could not update order. Try again.', 'error');
+    return;
+  }
+
+  const updated = getOrders().find(x => x.id === targetOrder.id);
+  if (updated) await sendCustomerNotification(updated, 'shipped');
 
   renderOrdersTable();
   renderAdminDashboard();
@@ -636,18 +683,22 @@ async function markAsShipped(orderIndex) {
 }
 
 // ============================================================
-// NEWSLETTER (UPDATED)
+// NEWSLETTER
 // ============================================================
 async function subscribeNewsletter(e) {
   e.preventDefault();
   const email = document.getElementById('nlEmail').value.trim();
-  const subs = getSubscribers();
-  if (!subs.find(s => s.email === email)) {
-    subs.push({ email, date: new Date().toLocaleDateString() });
-    await setSubscribers(subs);
+
+  const ok = await refreshThenSave((data) => {
+    if (!data.subscribers.find(s => s.email === email)) {
+      data.subscribers.push({ email, date: new Date().toLocaleDateString() });
+    }
+  });
+
+  if (ok) {
     showToast('You are on the list.', 'success');
   } else {
-    showToast('You are already on the list.', 'success');
+    showToast('Could not subscribe. Check your connection.', 'error');
   }
   document.getElementById('nlEmail').value = '';
 }
@@ -680,7 +731,8 @@ function adminLogout() {
 // ============================================================
 // ADMIN — DASHBOARD
 // ============================================================
-function renderAdminDashboard() {
+async function renderAdminDashboard() {
+  await loadFromServer();
   const orders = getOrders();
   const revenue = orders.filter(o => o.status === 'confirmed').reduce((s, o) => s + o.total, 0);
   document.getElementById('statOrders').textContent   = orders.length;
@@ -703,9 +755,10 @@ function renderAdminDashboard() {
 }
 
 // ============================================================
-// ADMIN — ORDERS (UPDATED with Confirm & Ship buttons)
+// ADMIN — ORDERS
 // ============================================================
-function renderOrdersTable() {
+async function renderOrdersTable() {
+  await loadFromServer();
   const orders = getOrders();
   const tbody = document.getElementById('ordersBody');
   if (!orders.length) {
@@ -730,28 +783,29 @@ function renderOrdersTable() {
 }
 
 // ============================================================
-// UPDATE ORDER STATUS (UPDATED - sends emails)
-// ============================================================
-async function updateOrderStatus(idx, val) {
-  const orders = getOrders();
-  orders[idx].status = val;
-  await setOrders(orders);
-
-  // Send notification to customer
-  await sendCustomerNotification(orders[idx], val);
-
-  showToast('Order status updated. Customer notified.', 'success');
-  renderAdminDashboard();
-}
-
-// ============================================================
-// DELETE ORDER (UPDATED)
+// DELETE ORDER
 // ============================================================
 async function deleteOrder(idx) {
   if (!confirm('Delete this order? This cannot be undone.')) return;
+
+  await loadFromServer();
   const orders = getOrders();
-  orders.splice(idx, 1);
-  await setOrders(orders);
+  if (!orders[idx]) {
+    showToast('That order could not be found. The list may have changed.', 'error');
+    renderOrdersTable();
+    return;
+  }
+  const targetId = orders[idx].id;
+
+  const ok = await refreshThenSave((data) => {
+    data.orders = data.orders.filter(o => o.id !== targetId);
+  });
+
+  if (!ok) {
+    showToast('Could not delete order. Try again.', 'error');
+    return;
+  }
+
   renderOrdersTable();
   renderAdminDashboard();
   showToast('Order deleted.');
@@ -760,7 +814,8 @@ async function deleteOrder(idx) {
 // ============================================================
 // ADMIN — PRODUCTS
 // ============================================================
-function renderProductsTable() {
+async function renderProductsTable() {
+  await loadFromServer();
   const tbody = document.getElementById('productsBody');
   const prods = getProducts();
   if (!prods.length) {
@@ -793,7 +848,7 @@ function previewNewProdImg(inp) {
 }
 
 // ============================================================
-// ADD PRODUCT (UPDATED)
+// ADD PRODUCT
 // ============================================================
 async function addProduct() {
   const name     = document.getElementById('newPName').value.trim();
@@ -809,9 +864,16 @@ async function addProduct() {
     return;
   }
 
-  const prods = getProducts();
-  prods.push({ id: Date.now(), name, cat, price, oldPrice, desc, img, badge: null });
-  await setProducts(prods);
+  const newProduct = { id: Date.now(), name, cat, price, oldPrice, desc, img, badge: null };
+
+  const ok = await refreshThenSave((data) => {
+    data.products.push(newProduct);
+  });
+
+  if (!ok) {
+    showToast('Could not save product. Check your connection and try again.', 'error');
+    return;
+  }
 
   document.getElementById('newPName').value = '';
   document.getElementById('newPPrice').value = '';
@@ -850,30 +912,70 @@ function previewEditImg(inp) {
 }
 
 // ============================================================
-// SAVE EDIT PRODUCT (UPDATED)
+// SAVE EDIT PRODUCT
 // ============================================================
 async function saveEditProduct() {
-  const idx   = parseInt(document.getElementById('editProdIdx').value);
-  const prods = getProducts();
-  prods[idx].name     = document.getElementById('editName').value;
-  prods[idx].price    = parseInt(document.getElementById('editPrice').value);
-  prods[idx].oldPrice = parseInt(document.getElementById('editOldPrice').value) || null;
-  prods[idx].desc     = document.getElementById('editDesc').value;
-  if (editImgData) prods[idx].img = editImgData;
-  await setProducts(prods);
+  const idx = parseInt(document.getElementById('editProdIdx').value);
+  const currentProducts = getProducts();
+  if (!currentProducts[idx]) {
+    showToast('That product could not be found. The list may have changed.', 'error');
+    closeModal('editModal');
+    renderProductsTable();
+    return;
+  }
+  const targetId = currentProducts[idx].id;
+
+  const newName     = document.getElementById('editName').value;
+  const newPrice     = parseInt(document.getElementById('editPrice').value);
+  const newOldPrice = parseInt(document.getElementById('editOldPrice').value) || null;
+  const newDesc     = document.getElementById('editDesc').value;
+  const newImg = editImgData;
+
+  const ok = await refreshThenSave((data) => {
+    const p = data.products.find(x => x.id === targetId);
+    if (p) {
+      p.name = newName;
+      p.price = newPrice;
+      p.oldPrice = newOldPrice;
+      p.desc = newDesc;
+      if (newImg) p.img = newImg;
+    }
+  });
+
+  if (!ok) {
+    showToast('Could not save changes. Try again.', 'error');
+    return;
+  }
+
   closeModal('editModal');
   renderProductsTable();
   showToast('Product updated.', 'success');
 }
 
 // ============================================================
-// DELETE PRODUCT (UPDATED)
+// DELETE PRODUCT
 // ============================================================
 async function deleteProduct(idx) {
   if (!confirm('Delete this product? It will be removed from the shop immediately.')) return;
-  const prods = getProducts();
-  prods.splice(idx, 1);
-  await setProducts(prods);
+
+  await loadFromServer();
+  const currentProducts = getProducts();
+  if (!currentProducts[idx]) {
+    showToast('That product could not be found. The list may have changed.', 'error');
+    renderProductsTable();
+    return;
+  }
+  const targetId = currentProducts[idx].id;
+
+  const ok = await refreshThenSave((data) => {
+    data.products = data.products.filter(p => p.id !== targetId);
+  });
+
+  if (!ok) {
+    showToast('Could not delete product. Try again.', 'error');
+    return;
+  }
+
   renderProductsTable();
   showToast('Product deleted.', 'success');
 }
@@ -881,7 +983,8 @@ async function deleteProduct(idx) {
 // ============================================================
 // ADMIN — NEWSLETTER
 // ============================================================
-function renderSubsTable() {
+async function renderSubsTable() {
+  await loadFromServer();
   const subs = getSubscribers();
   document.getElementById('nlSubCountEl').textContent = subs.length;
   const tbody = document.getElementById('subsBody');
@@ -898,12 +1001,27 @@ function renderSubsTable() {
 }
 
 // ============================================================
-// REMOVE SUB (UPDATED)
+// REMOVE SUB
 // ============================================================
 async function removeSub(idx) {
+  await loadFromServer();
   const subs = getSubscribers();
-  subs.splice(idx, 1);
-  await setSubscribers(subs);
+  if (!subs[idx]) {
+    showToast('That subscriber could not be found. The list may have changed.', 'error');
+    renderSubsTable();
+    return;
+  }
+  const targetEmail = subs[idx].email;
+
+  const ok = await refreshThenSave((data) => {
+    data.subscribers = data.subscribers.filter(s => s.email !== targetEmail);
+  });
+
+  if (!ok) {
+    showToast('Could not remove subscriber. Try again.', 'error');
+    return;
+  }
+
   renderSubsTable();
   showToast('Subscriber removed.');
 }
@@ -929,7 +1047,8 @@ function sendNewsletter() {
 // ============================================================
 // ADMIN — SETTINGS
 // ============================================================
-function loadSettingsUI() {
+async function loadSettingsUI() {
+  await loadFromServer();
   const s = getSettings();
 
   if (s.bankName) {
@@ -962,10 +1081,9 @@ function loadSettingsUI() {
 }
 
 // ============================================================
-// SAVE BANK DETAILS (UPDATED)
+// SAVE BANK DETAILS
 // ============================================================
 async function saveBankDetails() {
-  const s = getSettings();
   const name = document.getElementById('setBankName').value.trim();
   const accN = document.getElementById('setAccName').value.trim();
   const accU = document.getElementById('setAccNum').value.trim();
@@ -973,30 +1091,45 @@ async function saveBankDetails() {
     showToast('Please fill in all bank fields.', 'error');
     return;
   }
-  s.bankName = name;
-  s.accName = accN;
-  s.accNum = accU;
-  await setSettings(s);
+
+  const ok = await refreshThenSave((data) => {
+    data.settings.bankName = name;
+    data.settings.accName = accN;
+    data.settings.accNum = accU;
+  });
+
+  if (!ok) {
+    showToast('Could not save bank details. Try again.', 'error');
+    return;
+  }
+
   loadSettingsUI();
   showToast('Bank details saved. Customers will see these at checkout.', 'success');
 }
 
 // ============================================================
-// CLEAR BANK DETAILS (UPDATED)
+// CLEAR BANK DETAILS
 // ============================================================
 async function clearBankDetails() {
   if (!confirm('Remove bank details? Customers will see "Not configured" at checkout.')) return;
-  const s = getSettings();
-  delete s.bankName;
-  delete s.accName;
-  delete s.accNum;
-  await setSettings(s);
+
+  const ok = await refreshThenSave((data) => {
+    delete data.settings.bankName;
+    delete data.settings.accName;
+    delete data.settings.accNum;
+  });
+
+  if (!ok) {
+    showToast('Could not remove bank details. Try again.', 'error');
+    return;
+  }
+
   loadSettingsUI();
   showToast('Bank details removed.');
 }
 
 // ============================================================
-// SAVE ADMIN EMAIL (UPDATED)
+// SAVE ADMIN EMAIL
 // ============================================================
 async function saveAdminEmail() {
   const email = document.getElementById('setAdminEmail').value.trim();
@@ -1004,21 +1137,35 @@ async function saveAdminEmail() {
     showToast('Please enter an email.', 'error');
     return;
   }
-  const s = getSettings();
-  s.adminEmail = email;
-  await setSettings(s);
+
+  const ok = await refreshThenSave((data) => {
+    data.settings.adminEmail = email;
+  });
+
+  if (!ok) {
+    showToast('Could not save email. Try again.', 'error');
+    return;
+  }
+
   loadSettingsUI();
   showToast('Notification email saved.', 'success');
 }
 
 // ============================================================
-// CLEAR NOTIFICATION EMAIL (UPDATED)
+// CLEAR NOTIFICATION EMAIL
 // ============================================================
 async function clearNotifEmail() {
   if (!confirm('Remove notification email?')) return;
-  const s = getSettings();
-  delete s.adminEmail;
-  await setSettings(s);
+
+  const ok = await refreshThenSave((data) => {
+    delete data.settings.adminEmail;
+  });
+
+  if (!ok) {
+    showToast('Could not remove email. Try again.', 'error');
+    return;
+  }
+
   loadSettingsUI();
   showToast('Notification email removed.');
 }
@@ -1072,7 +1219,7 @@ function showToast(msg, type) {
 }
 
 // ============================================================
-// INIT (UPDATED)
+// INIT
 // ============================================================
 async function init() {
     await loadFromServer();
@@ -1083,6 +1230,23 @@ async function init() {
 }
 
 init();
+
+// Keep open tabs fresh: refetch when the tab regains focus, and
+// on a fixed interval, so a product or order added elsewhere
+// becomes visible without the user needing to reload the page.
+window.addEventListener('focus', async () => {
+  await loadFromServer();
+  const activePage = document.querySelector('.page.active');
+  if (activePage && activePage.id === 'page-home') renderHomeProducts();
+  if (activePage && activePage.id === 'page-shop') renderShopProducts();
+});
+
+setInterval(async () => {
+  await loadFromServer();
+  const activePage = document.querySelector('.page.active');
+  if (activePage && activePage.id === 'page-home') renderHomeProducts();
+  if (activePage && activePage.id === 'page-shop') renderShopProducts();
+}, 20000);
 
 document.querySelectorAll('.modal-overlay').forEach(m =>
   m.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); })

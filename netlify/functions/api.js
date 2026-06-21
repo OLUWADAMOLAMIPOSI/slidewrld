@@ -39,7 +39,8 @@ exports.handler = async (event, context) => {
           { headers: supabaseHeaders }
         );
         if (!res.ok) {
-          throw new Error('Supabase returned ' + res.status);
+          const errText = await res.text();
+          throw new Error('Supabase returned ' + res.status + ': ' + errText);
         }
         const rows = await res.json();
         const data = (rows[0] && rows[0].data) || DEFAULT_DATA;
@@ -49,6 +50,7 @@ exports.handler = async (event, context) => {
           body: JSON.stringify(data)
         };
       } catch (e) {
+        console.error('GET error:', e.message);
         return {
           statusCode: 200,
           headers,
@@ -60,24 +62,42 @@ exports.handler = async (event, context) => {
     case 'save': {
       try {
         const data = JSON.parse(event.body);
+
+        // Upsert guarantees the row exists and is written in one
+        // call. A plain PATCH against id=1 silently matches zero
+        // rows if that row was never created, and Supabase still
+        // returns a success response, which makes the save look
+        // like it worked when nothing was actually written.
         const res = await fetch(
-          SUPABASE_URL + '/rest/v1/store_data?id=eq.1',
+          SUPABASE_URL + '/rest/v1/store_data?on_conflict=id',
           {
-            method: 'PATCH',
-            headers: supabaseHeaders,
-            body: JSON.stringify({ data: data, updated_at: new Date().toISOString() })
+            method: 'POST',
+            headers: {
+              ...supabaseHeaders,
+              'Prefer': 'resolution=merge-duplicates,return=representation'
+            },
+            body: JSON.stringify({
+              id: 1,
+              data: data,
+              updated_at: new Date().toISOString()
+            })
           }
         );
+
         if (!res.ok) {
           const errText = await res.text();
           throw new Error('Supabase returned ' + res.status + ': ' + errText);
         }
+
+        const result = await res.json();
+
         return {
           statusCode: 200,
           headers,
-          body: JSON.stringify({ success: true })
+          body: JSON.stringify({ success: true, row: result })
         };
       } catch (e) {
+        console.error('SAVE error:', e.message);
         return {
           statusCode: 400,
           headers,
