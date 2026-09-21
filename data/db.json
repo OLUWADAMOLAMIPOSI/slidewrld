@@ -1,0 +1,98 @@
+{
+  "products": [
+    {
+      "id": "d8d6f737-abb4-485f-b73e-2e19cc01067a",
+      "slug": "nike-black-z6di",
+      "name": "Nike, black",
+      "category": "Nike",
+      "price": 300000,
+      "compareAtPrice": null,
+      "description": "",
+      "images": [
+        "/uploads/product-1788510527573-z33ocj.jpg"
+      ],
+      "sizes": [
+        "40",
+        "45",
+        "42"
+      ],
+      "featured": true,
+      "bestSeller": true,
+      "inStock": true,
+      "createdAt": "2026-09-04T08:29:04.173Z"
+    },
+    {
+      "id": "872c8bf7-72b8-4eca-a845-f7f18ecd90ec",
+      "slug": "nike-67n8",
+      "name": "nike",
+      "category": "Nike",
+      "price": 19972,
+      "compareAtPrice": null,
+      "description": "",
+      "images": [
+        "/uploads/product-1788417875301-7f93ed.jpg"
+      ],
+      "sizes": [
+        "32",
+        "30"
+      ],
+      "featured": false,
+      "bestSeller": false,
+      "inStock": true,
+      "createdAt": "2026-09-03T06:44:39.852Z"
+    },
+    {
+      "id": "d47c1b27-efc3-477c-8cfb-25bdf8ad6c9b",
+      "slug": "hoka-9pue",
+      "name": "hoka",
+      "category": "slides",
+      "price": 20000,
+      "compareAtPrice": null,
+      "description": "",
+      "images": [
+        "/uploads/product-1788413305081-y94z0i.jpg"
+      ],
+      "sizes": [
+        "32",
+        "30"
+      ],
+      "featured": true,
+      "bestSeller": false,
+      "inStock": true,
+      "createdAt": "2026-09-03T05:28:27.512Z"
+    }
+  ],
+  "orders": [],
+  "subscribers": [
+    {
+      "email": "successweb49@gmail.com",
+      "subscribedAt": "2026-09-03T05:30:30.301Z"
+    }
+  ],
+  "settings": {
+    "storeName": "SlideWrld",
+    "tagline": "Built for the ground you walk on.",
+    "heroHeading": "Designed with intention.",
+    "heroSubheading": "Quiet slides. Lasting comfort.",
+    "heroImage": "/uploads/product-1789365644175-ttv9i6.jpg",
+    "instagram": "https://instagram.com",
+    "tiktok": "https://tiktok.com",
+    "twitter": "https://twitter.com",
+    "whatsapp": "https://wa.me/2340000000000",
+    "contactEmail": "hello@slidewrld.com",
+    "aboutText": "SlideWrld makes slides for people who want one less decision in the morning. Every pair is built around comfort first, with a look quiet enough to wear anywhere.",
+    "shippingPolicy": "Orders are processed within 1-2 business days. Delivery within Nigeria takes 2-5 business days depending on location. You will receive an email once your order ships.",
+    "refundPolicy": "If a pair arrives faulty or is the wrong item, contact us within 7 days of delivery and we will arrange a replacement or refund. Items must be unworn and in original packaging.",
+    "privacyPolicy": "We only collect the information needed to process your order: name, email, phone number, and delivery address. We do not sell your information to third parties.",
+    "termsOfService": "By placing an order on SlideWrld you agree to pay the listed price in full via bank transfer before your order is processed and shipped.",
+    "bankName": "Your Bank Name",
+    "bankAccountName": "SlideWrld",
+    "bankAccountNumber": "0000000000",
+    "editorialImages": [
+      "/uploads/product-1789365016970-gnq3v1.jpg",
+      "/uploads/product-1789365027025-kpo7ya.jpg",
+      "/uploads/product-1789365677079-t5olvp.jpg"
+    ],
+    "editorialVideos": []
+  }
+}
