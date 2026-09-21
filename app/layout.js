@@ -3,6 +3,8 @@ import "./globals.css";
 import { CartProvider } from "@/components/CartContext";
 import { readData } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700"],
