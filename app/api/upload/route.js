@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
 import { requireAdmin } from "@/lib/requireAdmin";
+import { supabase } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
 
@@ -46,12 +45,30 @@ export async function POST(request) {
   const bytes = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  const uploadsDir = path.join(process.cwd(), "public", "uploads");
-  await mkdir(uploadsDir, { recursive: true });
-
-  const extension = path.extname(file.name) || (file.type.startsWith("video/") ? ".mp4" : ".jpg");
+  const extensionMap = {
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "image/gif": ".gif",
+    "video/mp4": ".mp4",
+    "video/webm": ".webm",
+    "video/quicktime": ".mov",
+  };
+  const extension = extensionMap[file.type] || "";
   const filename = `upload-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${extension}`;
-  await writeFile(path.join(uploadsDir, filename), buffer);
 
-  return NextResponse.json({ url: `/uploads/${filename}` });
+  const { error: uploadError } = await supabase.storage
+    .from("uploads")
+    .upload(filename, buffer, { contentType: file.type });
+
+  if (uploadError) {
+    return NextResponse.json(
+      { error: "Upload failed: " + uploadError.message },
+      { status: 500 }
+    );
+  }
+
+  const { data } = supabase.storage.from("uploads").getPublicUrl(filename);
+
+  return NextResponse.json({ url: data.publicUrl });
 }
