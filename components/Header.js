@@ -44,11 +44,11 @@ export default function Header({ storeName }) {
             />
           </button>
 
-          <Link href="/" className="text-lg tracking-wide2 md:text-xl">
+          <Link href="/" className="text-lg font-bold uppercase tracking-wide2 md:text-xl">
             {storeName || "SlideWrld"}
           </Link>
 
-          <nav className="hidden items-center gap-8 text-sm md:flex">
+          <nav className="hidden items-center gap-8 text-sm font-bold uppercase md:flex">
             {NAV_LINKS.map((link) => (
               <Link key={link.href} href={link.href} className="hover:text-muted">
                 {link.label}
@@ -59,7 +59,7 @@ export default function Header({ storeName }) {
           <button
             type="button"
             onClick={() => setIsDrawerOpen(true)}
-            className="text-sm"
+            className="text-sm font-bold uppercase"
             aria-label="Open cart"
           >
             Cart ({itemCount})
@@ -68,7 +68,7 @@ export default function Header({ storeName }) {
 
         {isMenuOpen && (
           <nav className="border-t border-line bg-paper px-5 py-4 md:hidden">
-            <ul className="flex flex-col gap-4 text-sm">
+            <ul className="flex flex-col gap-4 text-sm font-bold uppercase">
               {NAV_LINKS.map((link) => (
                 <li key={link.href}>
                   <Link
