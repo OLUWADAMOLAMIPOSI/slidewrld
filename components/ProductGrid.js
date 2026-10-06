@@ -14,7 +14,7 @@ export default function ProductGrid({ title, products, viewAllHref }) {
           </Link>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-5 md:gap-x-5 md:gap-y-8 lg:grid-cols-6">
         {products.map((product) => (
           <ProductCard key={product.id} product={product} />
         ))}
