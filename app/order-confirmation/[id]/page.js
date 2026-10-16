@@ -36,10 +36,10 @@ export default async function OrderConfirmationPage({ params }) {
         <div className="mx-auto mt-10 max-w-lg border border-line p-6">
           <ul className="flex flex-col gap-3 text-sm">
             {order.items.map((item) => (
-              <li key={`${item.productId}-${item.size}`} className="flex justify-between">
-                <span>
-                  {item.name} (Size {item.size}) x{item.quantity}
-                </span>
+            <li key={`${item.productId}-${item.size}-${item.color || "none"}`} className="flex justify-between">
+              <span>
+                {item.name} {item.color ? `(${item.color}, Size ${item.size})` : `(Size ${item.size})`} x{item.quantity}
+              </span>
                 <span>{formatNaira(item.price * item.quantity)}</span>
               </li>
             ))}

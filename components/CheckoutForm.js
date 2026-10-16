@@ -34,9 +34,10 @@ export default function CheckoutForm({ bankDetails }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: items.map((item) => ({
+            items: items.map((item) => ({
             productId: item.productId,
             size: item.size,
+            color: item.color,
             quantity: item.quantity,
           })),
           customer: form,

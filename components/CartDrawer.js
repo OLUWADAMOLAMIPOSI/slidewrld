@@ -6,14 +6,8 @@ import { useCart } from "@/components/CartContext";
 import { formatNaira } from "@/lib/format";
 
 export default function CartDrawer() {
-  const {
-    items,
-    isDrawerOpen,
-    setIsDrawerOpen,
-    updateQuantity,
-    removeItem,
-    subtotal,
-  } = useCart();
+  const { items, isDrawerOpen, setIsDrawerOpen, updateQuantity, removeItem, subtotal } =
+    useCart();
 
   if (!isDrawerOpen) return null;
 
@@ -44,7 +38,10 @@ export default function CartDrawer() {
           <div className="flex-1 overflow-y-auto">
             <ul className="flex flex-col gap-5">
               {items.map((item) => (
-                <li key={`${item.productId}-${item.size}`} className="flex gap-4">
+                <li
+                  key={`${item.productId}-${item.size}-${item.color || "none"}`}
+                  className="flex gap-4"
+                >
                   <div className="relative h-24 w-20 flex-shrink-0 overflow-hidden bg-surface">
                     {item.image && (
                       <Image
@@ -59,7 +56,9 @@ export default function CartDrawer() {
                   <div className="flex flex-1 flex-col justify-between text-sm">
                     <div>
                       <p>{item.name}</p>
-                      <p className="text-muted">Size {item.size}</p>
+                      <p className="text-muted">
+                        {item.color ? `${item.color} \u00b7 ` : ""}Size {item.size}
+                      </p>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -67,7 +66,12 @@ export default function CartDrawer() {
                           type="button"
                           className="h-6 w-6 border border-line"
                           onClick={() =>
-                            updateQuantity(item.productId, item.size, item.quantity - 1)
+                            updateQuantity(
+                              item.productId,
+                              item.size,
+                              item.color,
+                              item.quantity - 1
+                            )
                           }
                           aria-label="Decrease quantity"
                         >
@@ -78,7 +82,12 @@ export default function CartDrawer() {
                           type="button"
                           className="h-6 w-6 border border-line"
                           onClick={() =>
-                            updateQuantity(item.productId, item.size, item.quantity + 1)
+                            updateQuantity(
+                              item.productId,
+                              item.size,
+                              item.color,
+                              item.quantity + 1
+                            )
                           }
                           aria-label="Increase quantity"
                         >
@@ -90,7 +99,7 @@ export default function CartDrawer() {
                     <button
                       type="button"
                       className="mt-1 self-start text-xs text-muted underline"
-                      onClick={() => removeItem(item.productId, item.size)}
+                      onClick={() => removeItem(item.productId, item.size, item.color)}
                     >
                       Remove
                     </button>

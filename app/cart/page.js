@@ -28,7 +28,10 @@ export default function CartPage() {
             <div className="md:col-span-2">
               <ul className="flex flex-col divide-y divide-line">
                 {items.map((item) => (
-                  <li key={`${item.productId}-${item.size}`} className="flex gap-4 py-6">
+                  <li
+                    key={`${item.productId}-${item.size}-${item.color || "none"}`}
+                    className="flex gap-4 py-6"
+                  >
                     <div className="relative h-32 w-24 flex-shrink-0 overflow-hidden bg-surface">
                       {item.image && (
                         <Image
@@ -43,7 +46,9 @@ export default function CartPage() {
                     <div className="flex flex-1 flex-col justify-between">
                       <div>
                         <p className="text-sm">{item.name}</p>
-                        <p className="text-sm text-muted">Size {item.size}</p>
+                        <p className="text-sm text-muted">
+                          {item.color ? `${item.color} \u00b7 ` : ""}Size {item.size}
+                        </p>
                       </div>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
@@ -51,7 +56,12 @@ export default function CartPage() {
                             type="button"
                             className="h-8 w-8 border border-line"
                             onClick={() =>
-                              updateQuantity(item.productId, item.size, item.quantity - 1)
+                              updateQuantity(
+                                item.productId,
+                                item.size,
+                                item.color,
+                                item.quantity - 1
+                              )
                             }
                             aria-label="Decrease quantity"
                           >
@@ -62,19 +72,26 @@ export default function CartPage() {
                             type="button"
                             className="h-8 w-8 border border-line"
                             onClick={() =>
-                              updateQuantity(item.productId, item.size, item.quantity + 1)
+                              updateQuantity(
+                                item.productId,
+                                item.size,
+                                item.color,
+                                item.quantity + 1
+                              )
                             }
                             aria-label="Increase quantity"
                           >
                             +
                           </button>
                         </div>
-                        <span className="text-sm">{formatNaira(item.price * item.quantity)}</span>
+                        <span className="text-sm">
+                          {formatNaira(item.price * item.quantity)}
+                        </span>
                       </div>
                       <button
                         type="button"
                         className="mt-1 self-start text-xs text-muted underline"
-                        onClick={() => removeItem(item.productId, item.size)}
+                        onClick={() => removeItem(item.productId, item.size, item.color)}
                       >
                         Remove
                       </button>

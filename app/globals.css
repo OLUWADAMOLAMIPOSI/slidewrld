@@ -13,8 +13,14 @@ body {
 * {
   scrollbar-width: thin;
 }
-
-:focus-visible {
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+cus-visible {
   outline: 2px solid #17160f;
   outline-offset: 2px;
 }

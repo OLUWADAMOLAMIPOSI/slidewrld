@@ -1,24 +1,33 @@
 import Link from "next/link";
 import ProductCard from "@/components/ProductCard";
+import ScrollableRow from "@/components/ScrollableRow";
 
-export default function ProductGrid({ title, products, viewAllHref }) {
+export default function ProductGrid({ title, description, products, viewAllHref }) {
   if (!products.length) return null;
 
   return (
     <section className="mx-auto max-w-content px-5 py-14 md:px-8">
-      <div className="mb-6 flex items-center justify-between">
-        <h2 className="text-lg">{title}</h2>
+      <div className="relative mb-8 text-center">
+        <h2 className="text-3xl leading-tight md:text-5xl">{title}</h2>
+        {description && (
+          <p className="mx-auto mt-3 max-w-xl text-sm text-muted">{description}</p>
+        )}
         {viewAllHref && (
-          <Link href={viewAllHref} className="text-sm text-muted hover:text-ink">
+          <Link
+            href={viewAllHref}
+            className="absolute right-0 top-2 text-sm text-muted hover:text-ink"
+          >
             View all
           </Link>
         )}
       </div>
-      <div className="grid grid-cols-2 gap-x-4 gap-y-10 md:grid-cols-5 md:gap-x-5 md:gap-y-8 lg:grid-cols-6">
+      <ScrollableRow>
         {products.map((product) => (
-          <ProductCard key={product.id} product={product} />
+          <div key={product.id} className="w-[46vw] flex-shrink-0 sm:w-[260px]">
+            <ProductCard product={product} />
+          </div>
         ))}
-      </div>
+      </ScrollableRow>
     </section>
   );
 }

@@ -11,7 +11,8 @@ export default function QuickAddButton({ product }) {
     event.preventDefault();
     event.stopPropagation();
     const size = product.sizes?.[0] || "";
-    addItem(product, size, 1);
+    const color = product.colors?.[0]?.name || null;
+    addItem(product, size, 1, color);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 1500);
   }

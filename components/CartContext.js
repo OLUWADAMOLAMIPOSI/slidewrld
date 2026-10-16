@@ -5,6 +5,14 @@ import { createContext, useContext, useEffect, useState } from "react";
 const CartContext = createContext(null);
 const STORAGE_KEY = "slidewrld_cart";
 
+function sameLine(item, productId, size, color) {
+  return (
+    item.productId === productId &&
+    item.size === size &&
+    (item.color || null) === (color || null)
+  );
+}
+
 export function CartProvider({ children }) {
   const [items, setItems] = useState([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -25,10 +33,10 @@ export function CartProvider({ children }) {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
   }, [items, hasLoaded]);
 
-  function addItem(product, size, quantity = 1) {
+  function addItem(product, size, quantity = 1, color = null) {
     setItems((current) => {
-      const existingIndex = current.findIndex(
-        (item) => item.productId === product.id && item.size === size
+      const existingIndex = current.findIndex((item) =>
+        sameLine(item, product.id, size, color)
       );
       if (existingIndex !== -1) {
         const next = [...current];
@@ -47,17 +55,18 @@ export function CartProvider({ children }) {
           price: product.price,
           image: product.images?.[0] || "",
           size,
+          color: color || null,
           quantity,
         },
       ];
     });
   }
 
-  function updateQuantity(productId, size, quantity) {
+  function updateQuantity(productId, size, color, quantity) {
     setItems((current) =>
       current
         .map((item) =>
-          item.productId === productId && item.size === size
+          sameLine(item, productId, size, color)
             ? { ...item, quantity: Math.max(1, quantity) }
             : item
         )
@@ -65,10 +74,8 @@ export function CartProvider({ children }) {
     );
   }
 
-  function removeItem(productId, size) {
-    setItems((current) =>
-      current.filter((item) => !(item.productId === productId && item.size === size))
-    );
+  function removeItem(productId, size, color) {
+    setItems((current) => current.filter((item) => !sameLine(item, productId, size, color)));
   }
 
   function clearCart() {

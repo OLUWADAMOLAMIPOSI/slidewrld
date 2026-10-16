@@ -44,9 +44,9 @@ export default function Header({ storeName }) {
             />
           </button>
 
-          <Link href="/" className="text-lg font-bold uppercase tracking-wide2 md:text-xl">
-            {storeName || "SlideWrld"}
-          </Link>
+            <Link href="/" className="text-lg normal-case tracking-wide2 md:text-xl">
+              {storeName || "SlideWrld"}
+            </Link>
 
           <nav className="hidden items-center gap-8 text-sm font-bold uppercase md:flex">
             {NAV_LINKS.map((link) => (

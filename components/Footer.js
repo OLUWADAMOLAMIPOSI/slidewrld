@@ -55,7 +55,7 @@ export default function Footer({ settings }) {
           )}
         </div>
 
-        <p className="mt-12 text-xs text-muted">
+       <p className="mt-12 text-xs normal-case text-muted">
           &copy; {year} {settings?.storeName || "SlideWrld"}. All rights reserved.
         </p>
       </div>

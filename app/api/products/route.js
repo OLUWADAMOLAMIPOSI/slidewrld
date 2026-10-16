@@ -3,12 +3,10 @@ import { v4 as uuid } from "uuid";
 import { readData, writeData } from "@/lib/db";
 import { requireAdmin } from "@/lib/requireAdmin";
 
+export const dynamic = "force-dynamic";
+
 function slugify(value) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "");
+  return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)+/g, "");
 }
 
 export async function GET() {
@@ -18,20 +16,20 @@ export async function GET() {
 
 export async function POST(request) {
   const session = await requireAdmin(request);
-  if (!session) {
-    return NextResponse.json({ error: "Not authorized." }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Not authorized." }, { status: 401 });
 
   const body = await request.json();
 
   if (!body.name || !body.price || !body.category) {
-    return NextResponse.json(
-      { error: "Name, category, and price are required." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Name, category, and price are required." }, { status: 400 });
   }
 
-  const product = {
+   const stockValue =
+    body.stock === null || body.stock === undefined || body.stock === ""
+      ? null
+      : Math.max(0, Number(body.stock));
+
+  const product = { 
     id: uuid(),
     slug: slugify(body.name) + "-" + Math.random().toString(36).slice(2, 6),
     name: body.name,
@@ -40,11 +38,17 @@ export async function POST(request) {
     compareAtPrice: body.compareAtPrice ? Number(body.compareAtPrice) : null,
     description: body.description || "",
     images: body.images || [],
+    colors: body.colors || [],
     sizes: body.sizes || [],
     featured: Boolean(body.featured),
     bestSeller: Boolean(body.bestSeller),
-    inStock: body.inStock !== undefined ? Boolean(body.inStock) : true,
-    createdAt: new Date().toISOString(),
+    stock: stockValue,
+    inStock:
+      stockValue !== null
+        ? stockValue > 0
+        : body.inStock !== undefined
+        ? Boolean(body.inStock)
+        : true,    createdAt: new Date().toISOString(),
   };
 
   await writeData((data) => {

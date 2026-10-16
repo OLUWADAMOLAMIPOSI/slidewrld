@@ -5,6 +5,11 @@ import Footer from "@/components/Footer";
 import ProductGrid from "@/components/ProductGrid";
 import Reveal from "@/components/Reveal";
 import TrustBadges from "@/components/TrustBadges";
+import ColorShowcase from "@/components/ColorShowcase";
+import BrandsRow from "@/components/BrandsRow";
+import FunFacts from "@/components/FunFacts";
+import SneakPeek from "@/components/SneakPeek";
+import StyleGuide from "@/components/StyleGuide";
 import { readData } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +23,14 @@ export default async function HomePage() {
     .slice(0, 8);
   const bestSellers = products.filter((p) => p.bestSeller).slice(0, 8);
   const editorialVideos = settings.editorialVideos || [];
+  const sectionDescriptions = settings.sectionDescriptions || {};
+  const showcaseProduct = settings.showcaseProductId
+    ? products.find((p) => p.id === settings.showcaseProductId)
+    : null;
+  const brands = settings.brands || [];
+  const funFacts = settings.funFacts || [];
+  const sneakPeeks = settings.sneakPeeks || [];
+  const styleGuide = settings.styleGuide || [];
 
   return (
     <>
@@ -32,14 +45,9 @@ export default async function HomePage() {
             className="object-cover"
           />
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-ink/10 p-6 text-center md:p-14">
-            <h1 className="max-w-md text-3xl text-paper md:text-5xl">
-              {settings.heroHeading}
-            </h1>
+            <h1 className="max-w-md text-3xl text-paper md:text-5xl">{settings.heroHeading}</h1>
             <p className="mt-3 max-w-sm text-paper/90">{settings.heroSubheading}</p>
-            <Link
-              href="/products"
-              className="mt-6 bg-paper px-6 py-3 text-sm text-ink"
-            >
+            <Link href="/products" className="mt-6 bg-paper px-6 py-3 text-sm text-ink">
               Shop collection
             </Link>
           </div>
@@ -49,20 +57,37 @@ export default async function HomePage() {
           <TrustBadges />
         </Reveal>
 
-        <Reveal>
-          <ProductGrid title="New arrivals" products={newArrivals} viewAllHref="/products" />
-        </Reveal>
-        <Reveal>
-          <ProductGrid title="Best sellers" products={bestSellers} viewAllHref="/products" />
-        </Reveal>
+        {showcaseProduct && showcaseProduct.colors?.length > 1 && (
+          <Reveal>
+            <ColorShowcase product={showcaseProduct} />
+          </Reveal>
+        )}
 
         <Reveal>
-          <section className="mx-auto max-w-content px-5 py-14 text-center md:px-8">
-            <p className="mx-auto max-w-xl text-lg">
-              {settings.storeName} is considered comfort. {settings.tagline}
-            </p>
-          </section>
+          <ProductGrid
+            title="New arrivals"
+            description={sectionDescriptions.newArrivals}
+            products={newArrivals}
+            viewAllHref="/products"
+          />
         </Reveal>
+
+        {styleGuide.length > 0 && (
+          <Reveal>
+            <StyleGuide items={styleGuide} description={sectionDescriptions.styleGuide} />
+          </Reveal>
+        )}
+
+        <Reveal>
+          <ProductGrid
+            title="Best sellers"
+            description={sectionDescriptions.bestSellers}
+            products={bestSellers}
+            viewAllHref="/products"
+          />
+        </Reveal>
+
+       
 
         {editorialVideos.length > 0 && (
           <Reveal>
@@ -80,6 +105,24 @@ export default async function HomePage() {
                 </div>
               ))}
             </section>
+          </Reveal>
+        )}
+
+        {funFacts.length > 0 && (
+          <Reveal>
+            <FunFacts facts={funFacts} />
+          </Reveal>
+        )}
+
+        {sneakPeeks.length > 0 && (
+          <Reveal>
+            <SneakPeek items={sneakPeeks} description={sectionDescriptions.sneakPeek} />
+          </Reveal>
+        )}
+
+        {brands.length > 0 && (
+          <Reveal>
+            <BrandsRow brands={brands} />
           </Reveal>
         )}
       </main>

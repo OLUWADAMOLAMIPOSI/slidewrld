@@ -38,9 +38,10 @@ export async function POST(request) {
     const product = data.products.find((p) => p.id === item.productId);
     if (!product) continue;
     const quantity = Math.max(1, Number(item.quantity) || 1);
-    orderItems.push({
+      orderItems.push({
       productId: product.id,
       name: product.name,
+      color: item.color || null,
       size: item.size || "",
       price: product.price,
       quantity,
@@ -48,8 +49,24 @@ export async function POST(request) {
     total += product.price * quantity;
   }
 
-  if (!orderItems.length) {
-    return NextResponse.json({ error: "No valid items in cart." }, { status: 400 });
+    const requested = {};
+  for (const item of orderItems) {
+    requested[item.productId] = (requested[item.productId] || 0) + item.quantity;
+  }
+
+  for (const [productId, quantity] of Object.entries(requested)) {
+    const product = data.products.find((p) => p.id === productId);
+    if (!product) continue;
+    const hasLimit = typeof product.stock === "number";
+    if (!product.inStock || (hasLimit && product.stock <= 0)) {
+      return NextResponse.json({ error: `${product.name} is out of stock.` }, { status: 409 });
+    }
+    if (hasLimit && quantity > product.stock) {
+      return NextResponse.json(
+        { error: `Only ${product.stock} of ${product.name} left. Please reduce the quantity.` },
+        { status: 409 }
+      );
+    }
   }
 
   const order = {
@@ -68,10 +85,17 @@ export async function POST(request) {
     createdAt: new Date().toISOString(),
   };
 
-  await writeData((data) => {
+    await writeData((data) => {
     data.orders.push(order);
-  });
 
+    for (const [productId, quantity] of Object.entries(requested)) {
+      const product = data.products.find((p) => p.id === productId);
+      if (product && typeof product.stock === "number") {
+        product.stock = Math.max(0, product.stock - quantity);
+        if (product.stock === 0) product.inStock = false;
+      }
+    }
+  });
   const [confirmationResult, adminNotificationResult] = await Promise.allSettled([
     sendOrderConfirmationEmail(order),
     sendAdminOrderNotification(order),

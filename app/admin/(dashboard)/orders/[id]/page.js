@@ -59,9 +59,9 @@ export default async function AdminOrderDetailPage({ params }) {
         <h2 className="mb-3 text-sm text-muted">Items</h2>
         <ul className="flex flex-col gap-3 text-sm">
           {order.items.map((item) => (
-            <li key={`${item.productId}-${item.size}`} className="flex justify-between">
+           <li key={`${item.productId}-${item.size}-${item.color || "none"}`} className="flex justify-between">
               <span>
-                {item.name} (Size {item.size}) x{item.quantity}
+                {item.name} {item.color ? `(${item.color}, Size ${item.size})` : `(Size ${item.size})`} x{item.quantity}
               </span>
               <span>{formatNaira(item.price * item.quantity)}</span>
             </li>

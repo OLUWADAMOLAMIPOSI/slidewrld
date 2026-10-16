@@ -11,7 +11,7 @@ export default async function AdminSettingsPage() {
   return (
     <div>
       <h1 className="mb-8 text-2xl">Settings</h1>
-      <SettingsForm settings={data.settings} />
+      <SettingsForm settings={data.settings} products={data.products} />
     </div>
   );
 }
