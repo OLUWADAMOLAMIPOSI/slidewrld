@@ -103,6 +103,7 @@ export async function POST(request) {
       reference,
       totalNaira: total,
       customer: pending.customer,
+      items: orderItems,
       returnUrl: `${siteUrl}/opay/return?reference=${reference}`,
       cancelUrl: `${siteUrl}/checkout`,
       callbackUrl: `${siteUrl}/api/opay/callback`,
@@ -120,8 +121,12 @@ export async function POST(request) {
       d.pendingPayments = (d.pendingPayments || []).filter((p) => p.reference !== reference);
     });
 
-    return NextResponse.json(
-      { error: "We could not start the OPay payment. Please try again." },
+        return NextResponse.json(
+      {
+        error:
+          "We could not start the OPay payment. Please try again. Reason: " +
+          (error?.message || "unknown"),
+      },
       { status: 502 }
     );
   }
