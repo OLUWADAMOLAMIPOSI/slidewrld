@@ -3,6 +3,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { readData } from "@/lib/db";
 import { formatNaira } from "@/lib/format";
+import ClearCartOnVisit from "@/components/ClearCartOnVisit";
 
 export const dynamic = "force-dynamic";
 
@@ -67,6 +68,7 @@ export default async function OrderConfirmationPage({ params }) {
             </div>
           </dl>
         </div>
+                <ClearCartOnVisit />
       </main>
       <Footer settings={settings} />
     </>
