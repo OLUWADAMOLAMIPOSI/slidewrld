@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import AutoRefresh from "@/components/AutoRefresh";
+import { readData } from "@/lib/db";
 import { finalizeOpayPayment } from "@/lib/finalizeOpay";
 
 export const dynamic = "force-dynamic";
@@ -11,6 +12,8 @@ export const metadata = { title: "Confirming payment" };
 
 export default async function OpayReturnPage({ searchParams }) {
   const reference = String(searchParams?.reference || "");
+  const { settings } = await readData();
+
   let result = { state: "unknown" };
   let couldNotVerify = false;
 
@@ -31,7 +34,7 @@ export default async function OpayReturnPage({ searchParams }) {
 
   return (
     <>
-      <Header />
+      <Header storeName={settings.storeName} />
       <main className="mx-auto max-w-xl px-5 py-20 text-center md:px-8">
         {waiting ? (
           <>
@@ -65,7 +68,7 @@ export default async function OpayReturnPage({ searchParams }) {
           </>
         )}
       </main>
-      <Footer />
+      <Footer settings={settings} />
     </>
   );
 }
